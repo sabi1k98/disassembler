@@ -1,2 +1,2 @@
 # disassembler
-School project: disassembler for subset of instructions
+School project: dissasembler for subset of instructions
