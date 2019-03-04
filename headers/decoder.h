@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 
 
 
@@ -64,6 +65,20 @@ enum GPR_64-bit {
     R8, R9, R10, R11, R12, R13, R14, R15
 }
 
+enum primary_opcodes {
+    JMP_REL8OFF = 0xEB
+    JMP_REL32OFF = 0xE9
+}
+
+enum operands {
+    MODrm, SIB, DISPLACEMENT_32, DISPLACEMENT_16, DISPLACEMENT_8, IMMEDIATE, NONE, ERROR
+};
+
+typedef int params;
+
+
+void getExpectedParams(uint8_t opcode, int remaining, params* params);
+
 enum constants {
     MAX_BYTES = 15 /**< Maximum length of encoded instruction */
 };
@@ -79,5 +94,20 @@ enum constants {
 bool strHex2Bin(int argc, const char** argv, uint8_t* result);
 
 
+bool isREXprefix(const uint8_t byte);
+
+int8_t ge8BitDisplacement(uint8_t* instruction, int start);
+
+int16_t ge16BitDisplacement(uint8_t* instruction, int start);
+
+int32_t get32BitDisplacement(uint8_t* instruction, int start);
+
+char* decode(int length, uint8_t* instruction);
+
+char* opcodeToString(uint8_t opcode);
+
+bool decodeOpcode(uint8_t opcode);
+
+REX storeREX(uint8_t prefix);
 
 #endif
