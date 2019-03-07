@@ -1,25 +1,17 @@
 #include "decoder.h"
 
 
-bool strHex2Bin(int argc, const char** argv, uint8_t* result) {
-    for ( int i=0 ; i < argc ; i++ ) {
-        if ( sscanf(argv[i], "%2hhX", &result[i]) != 1 ) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-
 bool isREXprefix(const uint8_t byte) {
-    return (byte ^ 0x0400) >= 0x00FF;
+    return (byte ^ 0x040) >= 0x00FF;
 }
 
-char* opcodeToString(uint8_t opcode) {
+bool opcodeToString(const uint8_t opcode, char* string) {
+    //printf("%x\n", opcode);
     if (opcode == JMP_REL8OFF || opcode == JMP_REL32OFF) {
-        return "JMP";
+        sprintf(string, "%s\t", "JMP");
+        return true;
     }
-    return NULL;
+    return false;
 }
 
 
@@ -33,9 +25,7 @@ void getExpectedParams(uint8_t opcode, int remaining, params* params) {
             }
             break;
         case JMP_REL32OFF:
-            if (remaining == 2) {
-                params[0] = DISPLACEMENT_16;
-            } else if (remaining == 4) {
+            if ( remaining == 4 ) {
                 params[0] = DISPLACEMENT_32;
             } else {
                 params[0] = ERROR;
@@ -45,32 +35,51 @@ void getExpectedParams(uint8_t opcode, int remaining, params* params) {
 }
 
 
-int8_t get8BitDisplacement(uint8_t* instruction, int start) {
+uint8_t get8BitValue(const uint8_t* instruction, int start) {
     return instruction[start];
 }
 
 
-int16_t get16BitDisplacement(uint8_t* instruction, int start) {
-    return (int16_t) instruction[start];
-}
-
-
-int32_t get32BitDisplacement(uint8_t* instruction, int start) {
-    return (int32_t) instruction[start];
+uint32_t get32BitValue(const uint8_t* instruction, int start) {
+    instruction += start;
+    uint32_t ret = *((uint32_t*) instruction);
+    instruction -= start;
+    return ret;
 }
 
 
 char* printInstruction(uint8_t opcode, params* expectedParams, uint8_t* instruction, int start) {
-    char result[4] = opcodeToString(opcode);
+    char result[50] = { 0 };
+    char buffer[20];
+    opcodeToString(opcode, result);
+    int i = 0;
+    while( expectedParams[i] != NONE ) {
+        switch ( expectedParams[i] ) {
+            case DISPLACEMENT_8:
+                sprintf(buffer, "(%%rip)+%x", get8BitValue(instruction, start));
+                start++;
+                strcat(result, buffer);
+                break;
+            case DISPLACEMENT_32:
+                sprintf(buffer, "(%%rip)+%x", get32BitValue(instruction, start));
+                start += 4;
+                strcat(result, buffer);
+                break;
+        }
+        i++;
+    }
+    printf("%s\n", result);
+    return NULL;
 }
 
-char* decode(int length, uint8_t* instruction) {
+void decode(int length, uint8_t* instruction) {
     int i = 0;
     if ( isREXprefix(instruction[0]) ) {
         i++;
     }
     uint8_t opcode = instruction[i];
     i++;
-    params expectedParams[7] = { NONE };
+    params expectedParams[3] = { NONE };
     getExpectedParams(opcode, length - i, expectedParams);
+    printInstruction(opcode, expectedParams, instruction, i);
 }

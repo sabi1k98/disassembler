@@ -16,9 +16,9 @@
 
 
 typedef struct ModRM {
-    uint8_t mod:2; /**< addressing mode */
-            reg:3; /**<  */
-            r/m:3; /**< register or memory */
+    uint8_t mod:2, /**< addressing mode */
+            reg:3, /**<  */
+            rm:3; /**< register or memory */
 } ModRM;
 
 
@@ -28,10 +28,10 @@ typedef struct ModRM {
  * addressing mode
  */
 typedef struct SIB {
-    uint8_t scale:2; /**< scale factor in computing effective address */
-            index:3; /**< register containing index portion of indirect address  */
+    uint8_t scale:2, /**< scale factor in computing effective address */
+            index:3, /**< register containing index portion of indirect address  */
             base:3;  /**< register containing base address portion of indexed address */
-}
+} SIB;
 
 
 /**
@@ -41,37 +41,47 @@ typedef struct SIB {
  * to 8 more extended GPR and YMM/XMM registers
  */
 typedef struct REX {
-    uint8_t b:1; /**< extends ModRM.r/m to 4 bits */
-            x:1; /**< extends SIB.reg to 4 bits */
-            r:1; /**< extends ModRM.reg to 4 bits */
-            w:1; /**< extends SIB.reg to 4 bits */
-            lower_nibble:4; /**< shall always be 0x4 */
+    uint8_t b:1, /**< extends ModRM.r/m to 4 bits */
+            x:1, /**< extends SIB.reg to 4 bits */
+            r:1, /**< extends ModRM.reg to 4 bits */
+            w:1, /**< extends SIB.reg to 4 bits */
+            lowerNibble:4; /**< shall always be 0x4 */
 } REX;
 
-enum GPR_8-bit {
+enum GPR_8bit {
     AL, CL, DL, BL, AH, CH, DH, BH
 };
 
-enum GPR_16-bit {
+enum GPR_16bit {
     AX, CX, DX, BX, SP, BP, SI, DI
 };
 
-enum GPR_32-bit {
+enum GPR_32bit {
     EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI
 };
 
-enum GPR_64-bit {
-    RAX, RCX, RDX, RDX, RSP, RBP, RSI, RDI,
+enum GPR_64bit {
+    RAX, RCX, RDX, RSP, RBP, RSI, RDI,
     R8, R9, R10, R11, R12, R13, R14, R15
-}
+};
 
 enum primary_opcodes {
-    JMP_REL8OFF = 0xEB
+    JMP_REL8OFF = 0xEB,
     JMP_REL32OFF = 0xE9
+    JE_REL8OFF = 0X74,
+    JE_REL32OFF = 0x84,
+    JNE_REL8OFF = 0X75
+    JB_REL8OFF = 0x72,
+    SECONDARY_ESCAPE = 0x0F /**< more of a prefix than opcode, this still belongs to the primary opcode table */
+};
+
+enum secondary_opcodes {
+    JNE_REL32OFF = 0x85
+    JB_REL32OFF = 0x82
 }
 
 enum operands {
-    MODrm, SIB, DISPLACEMENT_32, DISPLACEMENT_16, DISPLACEMENT_8, IMMEDIATE, NONE, ERROR
+    NONE, MODrm, S_I_B, DISPLACEMENT_32, DISPLACEMENT_8, IMMEDIATE, ERROR
 };
 
 typedef int params;
@@ -84,27 +94,16 @@ enum constants {
 };
 
 
-/**
- * @brief converts input arguments into numeric form
- * @param argc  ammount of bytes
- * @param argv  array of strings, each string should be one byte in hex
- * @param result    array of 1-byte where allocated size must be at least argc
- * @param return true on success, false if conversion fails
- */
-bool strHex2Bin(int argc, const char** argv, uint8_t* result);
-
 
 bool isREXprefix(const uint8_t byte);
 
-int8_t ge8BitDisplacement(uint8_t* instruction, int start);
+uint8_t ge8BitDisplacement(const uint8_t* instruction, int start);
 
-int16_t ge16BitDisplacement(uint8_t* instruction, int start);
+uint32_t get32BitDisplacement(const uint8_t* instruction, int start);
 
-int32_t get32BitDisplacement(uint8_t* instruction, int start);
+void decode(int length, uint8_t* instruction);
 
-char* decode(int length, uint8_t* instruction);
-
-char* opcodeToString(uint8_t opcode);
+bool opcodeToString(const uint8_t opcode, char* string);
 
 bool decodeOpcode(uint8_t opcode);
 

@@ -1,23 +1,28 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "decoder.h"
 
 
-
+bool strHex2Bin(int argc, const char** argv, uint8_t* result) {
+    for ( int i=1 ; i < argc ; i++ ) {
+        if ( sscanf(argv[i], " %hhx ", &result[i - 1]) != 1 ) {
+            return false;
+        }
+    }
+    return true;
+}
 
 
 int main(int argc, const char* argv[]) {
     //according to the amd64 manual, the total instruction length
     //can not be longer than 15 bytes
     if ( argc > MAX_BYTES ) { 
-        return 1;
+        return EXIT_FAILURE;
     }
     uint8_t instruction[MAX_BYTES] = { 0 };
     if ( !strHex2Bin(argc, argv, instruction) ) {
-        return 1;
+        return EXIT_FAILURE;
     }
-    for ( int i=0 ; i < 15 ; i++ ) {
-        printf("%x", instruction[i]);
-    }
-    putchar('\n');
-    return 0;
+    decode(argc - 1, instruction);
+    return EXIT_SUCCESS;
 }
