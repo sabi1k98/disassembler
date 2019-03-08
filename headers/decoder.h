@@ -73,6 +73,8 @@ enum primary_opcodes {
     JE_REL32OFF = 0x84,
     JNE_REL8OFF = 0X75,
     JB_REL8OFF = 0x72,
+    RET = 0XC3,
+    CALL_REL32OFF = 0XE8,
     SECONDARY_ESCAPE = 0x0F /**< more of a prefix than opcode, this still belongs to the primary opcode table */
 };
 

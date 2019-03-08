@@ -26,16 +26,22 @@ bool findOpcode(const uint8_t opcode, bool isEscaped, char* string) {
     }
     //printf("%x\n", opcode);
     if ( opcode == JMP_REL8OFF || opcode == JMP_REL32OFF ) {
-        sprintf(string, "%s\t", "JMP");
+        sprintf(string, "%s\t", "jmp");
         return true;
     } else if ( opcode == JE_REL8OFF || opcode == JE_REL32OFF ) {
-        sprintf(string, "%s\t", "JE"); 
+        sprintf(string, "%s\t", "je"); 
         return true;
     } else if ( opcode == JNE_REL8OFF ) {
-        sprintf(string, "%s\t", "JNE"); 
+        sprintf(string, "%s\t", "jne"); 
         return true;
     } else if ( opcode == JB_REL8OFF ) {
-        sprintf(string, "%s\t", "JB"); 
+        sprintf(string, "%s\t", "jb"); 
+        return true;
+    } else if ( opcode == RET ) {
+        sprintf(string, "%s", "ret"); 
+        return true;
+    } else if ( opcode == CALL_REL32OFF ) {
+        sprintf(string, "%s\t", "call"); 
         return true;
     }
     return false;
@@ -52,12 +58,15 @@ bool getExpectedParams(uint8_t opcode, int remaining, params* params) {
             return false;
         }
         if ( opcode == JMP_REL32OFF || opcode == JE_REL32OFF || opcode == JNE_REL32OFF ||
-                opcode == JB_REL32OFF ) {
+                opcode == JB_REL32OFF || opcode == CALL_REL32OFF ) {
             if ( remaining == 4 ) {
                 params[0] = DISPLACEMENT_32;
                 return true;
             }
             return false;
+        }
+        if ( opcode == RET ) {
+            return true;
         }
     return false;
 }
@@ -123,8 +132,6 @@ void decode(int length, uint8_t* instruction) {
     params expectedParams[3] = { NONE };
     data.expectedParams = expectedParams;
     if ( !getExpectedParams(data.opcode, length - data.index, expectedParams) ) {
-        printf("%x\n", data.opcode);
-        printf("I fucked up here\n");
         fprintf(stderr, "Unknown instruction\n");
         return;
     }
