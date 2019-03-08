@@ -9,6 +9,7 @@
 #define DECODER_H
 
 #include <stdint.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
@@ -67,31 +68,40 @@ enum GPR_64bit {
 
 enum primary_opcodes {
     JMP_REL8OFF = 0xEB,
-    JMP_REL32OFF = 0xE9
+    JMP_REL32OFF = 0xE9,
     JE_REL8OFF = 0X74,
     JE_REL32OFF = 0x84,
-    JNE_REL8OFF = 0X75
+    JNE_REL8OFF = 0X75,
     JB_REL8OFF = 0x72,
     SECONDARY_ESCAPE = 0x0F /**< more of a prefix than opcode, this still belongs to the primary opcode table */
 };
 
 enum secondary_opcodes {
-    JNE_REL32OFF = 0x85
+    JNE_REL32OFF = 0x85,
     JB_REL32OFF = 0x82
-}
+};
 
 enum operands {
-    NONE, MODrm, S_I_B, DISPLACEMENT_32, DISPLACEMENT_8, IMMEDIATE, ERROR
+    NONE, DISPLACEMENT_8, DISPLACEMENT_32, MODrm, S_I_B, ERROR
 };
 
 typedef int params;
 
 
-void getExpectedParams(uint8_t opcode, int remaining, params* params);
+bool getExpectedParams(uint8_t opcode, int remaining, params* params);
 
 enum constants {
     MAX_BYTES = 15 /**< Maximum length of encoded instruction */
 };
+
+
+typedef struct instructionData {
+    uint8_t opcode;
+    REX rex;
+    bool isEscaped;
+    int index;
+    params* expectedParams;
+} instructionData;
 
 
 
@@ -103,7 +113,7 @@ uint32_t get32BitDisplacement(const uint8_t* instruction, int start);
 
 void decode(int length, uint8_t* instruction);
 
-bool opcodeToString(const uint8_t opcode, char* string);
+bool opcodeToString(const uint8_t opcode, bool isEscaped, char* string);
 
 bool decodeOpcode(uint8_t opcode);
 
