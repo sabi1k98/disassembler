@@ -2,7 +2,7 @@
 
 
 bool isREXprefix(const uint8_t byte) {
-    return (byte ^ 0x040) >= 0x00FF;
+    return (byte & 0xF0) == 0x40;
 }
 
 bool isEscaped(const uint8_t instruction) {
@@ -20,30 +20,84 @@ bool findSecondaryOpcode(const uint8_t opcode, char* string) {
     return false;
 }
 
-bool findOpcode(const uint8_t opcode, bool isEscaped, char* string) {
-    if ( isEscaped ) {
-        return findSecondaryOpcode(opcode, string);
+char* findGPR(instructionData* data, char* string) {
+    int regValue;
+    regValue = data->opcode | (data->rex.b << 3) ;
+    switch (regValue) {
+        case RAX:
+            strcat(string, "%rax");
+            break;
+        case RCX:
+            strcat(string, "%rcx");
+            break;
+        case RDX:
+            strcat(string, "%rdx");
+            break;
+        case RBX:
+            strcat(string, "%rbx");
+            break;
+        case RSP:
+            strcat(string, "%rsp");
+            break;
+        case RBP:
+            strcat(string, "%rbp");
+            break;
+        case RSI:
+            strcat(string, "%rsi");
+            break;
+        case RDI:
+            strcat(string, "%rdi");
+            break;
+        default:{
+            char buffer[5] = { 0 };
+            sprintf(buffer, "%%r%d", regValue);
+            strcat(string, buffer);
+            break;
+            }
+    }
+    return string;
+}
+
+bool findOpcode(instructionData* data, char* string) {
+    if ( data->isEscaped ) {
+        return findSecondaryOpcode(data->opcode, string);
     }
     //printf("%x\n", opcode);
-    if ( opcode == JMP_REL8OFF || opcode == JMP_REL32OFF ) {
+    if ( data->opcode == JMP_REL8OFF || data->opcode == JMP_REL32OFF ) {
         sprintf(string, "%s\t", "jmp");
         return true;
-    } else if ( opcode == JE_REL8OFF || opcode == JE_REL32OFF ) {
+    } else if ( data->opcode == JE_REL8OFF || data->opcode == JE_REL32OFF ) {
         sprintf(string, "%s\t", "je"); 
         return true;
-    } else if ( opcode == JNE_REL8OFF ) {
+    } else if ( data->opcode == JNE_REL8OFF ) {
         sprintf(string, "%s\t", "jne"); 
         return true;
-    } else if ( opcode == JB_REL8OFF ) {
+    } else if ( data->opcode == JB_REL8OFF ) {
         sprintf(string, "%s\t", "jb"); 
         return true;
-    } else if ( opcode == RET ) {
+    } else if ( data->opcode == RET ) {
         sprintf(string, "%s", "ret"); 
         return true;
-    } else if ( opcode == CALL_REL32OFF ) {
+    } else if ( data->opcode == CALL_REL32OFF ) {
         sprintf(string, "%s\t", "call"); 
         return true;
+    } else if ( data->opcode == PUSH_IMM64 ||
+            (data->opcode >= PUSH_REG64 && data->opcode <= PUSH_REG64 + 0x7) ) {
+        sprintf(string, "%s\t", "push"); 
+        data->opcode -= PUSH_REG64;
+        return true;
+    } else if ( data->opcode >= POP_REG64 && data->opcode <= POP_REG64 + 0x7 ) {
+        sprintf(string, "%s\t", "pop"); 
+        data->opcode -= POP_REG64;
+        return true;
+    } else if ( data->opcode == INT3 ) {
+        sprintf(string, "%s", "int3"); 
+        return true;
+    } else if ( data->opcode == NOP ) {
+        sprintf(string, "%s", "nop"); 
+        return true;
     }
+
     return false;
 }
 
@@ -57,6 +111,7 @@ bool getExpectedParams(uint8_t opcode, int remaining, params* params) {
             }
             return false;
         }
+
         if ( opcode == JMP_REL32OFF || opcode == JE_REL32OFF || opcode == JNE_REL32OFF ||
                 opcode == JB_REL32OFF || opcode == CALL_REL32OFF ) {
             if ( remaining == 4 ) {
@@ -65,8 +120,27 @@ bool getExpectedParams(uint8_t opcode, int remaining, params* params) {
             }
             return false;
         }
-        if ( opcode == RET ) {
+
+        if ( opcode == RET || opcode == INT3 || opcode == NOP ) {
             return true;
+        }
+
+        if ( opcode == PUSH_IMM64 ) {
+            if ( remaining == 4 ) {
+                params[0] = IMM64;
+                return true;
+            }
+            return false;
+        }
+
+
+        if ( (opcode >= PUSH_REG64 && opcode <= PUSH_REG64 + 0x07)
+                || (opcode >= POP_REG64 && opcode <= POP_REG64 + 0x07) ) {
+            if ( remaining == 0 ) {
+                params[0] = RQ;
+                return true;
+            }
+            return false;
         }
     return false;
 }
@@ -87,8 +161,9 @@ uint32_t get32BitValue(const uint8_t* instruction, int start) {
 
 void printInstruction(instructionData* data, uint8_t* instruction) {
     char result[50] = { 0 };
-    char buffer[20];
-    if ( !findOpcode(data->opcode, data->isEscaped, result) ) {
+    char buffer[20] = { 0 };
+    if ( !findOpcode(data, result) ) {
+        printf("%d\n", data->opcode);
         fprintf(stderr, "Unknown instruction\n");
         return;
     }
@@ -104,6 +179,14 @@ void printInstruction(instructionData* data, uint8_t* instruction) {
                 sprintf(buffer, "(%%rip)+0x%x", get32BitValue(instruction, data->index));
                 data->index += 4;
                 strcat(result, buffer);
+                break;
+            case IMM64:
+                sprintf(buffer, "$0x%x", get32BitValue(instruction, data->index));
+                data->index += 4;
+                strcat(result, buffer);
+                break;
+            case RQ:
+                strcat(result, findGPR(data, buffer));
                 break;
         }
         i++;

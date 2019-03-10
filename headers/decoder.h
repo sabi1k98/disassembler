@@ -62,7 +62,7 @@ enum GPR_32bit {
 };
 
 enum GPR_64bit {
-    RAX, RCX, RDX, RSP, RBP, RSI, RDI,
+    RAX, RCX, RDX, RBX, RSP, RBP, RSI, RDI,
     R8, R9, R10, R11, R12, R13, R14, R15
 };
 
@@ -75,6 +75,11 @@ enum primary_opcodes {
     JB_REL8OFF = 0x72,
     RET = 0XC3,
     CALL_REL32OFF = 0XE8,
+    PUSH_IMM64 = 0X68,
+    PUSH_REG64 = 0x50,
+    POP_REG64 = 0x58,
+    INT3 = 0xCC,
+    NOP = 0x90,
     SECONDARY_ESCAPE = 0x0F /**< more of a prefix than opcode, this still belongs to the primary opcode table */
 };
 
@@ -84,7 +89,7 @@ enum secondary_opcodes {
 };
 
 enum operands {
-    NONE, DISPLACEMENT_8, DISPLACEMENT_32, MODrm, S_I_B, ERROR
+    NONE, DISPLACEMENT_8, DISPLACEMENT_32, MODrm, S_I_B, IMM64, RQ, ERROR
 };
 
 typedef int params;
@@ -115,7 +120,7 @@ uint32_t get32BitDisplacement(const uint8_t* instruction, int start);
 
 void decode(int length, uint8_t* instruction);
 
-bool opcodeToString(const uint8_t opcode, bool isEscaped, char* string);
+bool opcodeToString(instructionData* data, char* string);
 
 bool decodeOpcode(uint8_t opcode);
 
