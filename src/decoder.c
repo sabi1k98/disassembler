@@ -9,6 +9,21 @@ bool isEscaped(const uint8_t instruction) {
     return instruction == SECONDARY_ESCAPE;
 }
 
+
+uint8_t get8BitValue(instructionData* data) {
+    return data->instruction[data->index];
+}
+
+
+uint32_t get32BitValue(instructionData* data) {
+    data->instruction += data->index;
+    uint32_t ret = *((uint32_t*) data->instruction);
+    data->instruction -= data->index;
+    return ret;
+}
+
+
+
 bool findSecondaryOpcode(const uint8_t opcode, char* string) {
     if ( opcode == JNE_REL32OFF ) {
         sprintf(string, "%s\t", "JNE");
@@ -60,16 +75,42 @@ char* regValue2String(int regValue, char* string) {
 char* findGPR(instructionData* data, char* string) {
     int regValue;
     regValue = data->opcode | (data->rex.b << 3);
-        return regValue2String(regValue, string);
+    return regValue2String(regValue, string);
 }
 
+
+char* decodeMoveInstruction(instructionData* data, ModRM modrm, char* string) { 
+    if ( modrm.rm != 0x5) {
+        return NULL;
+    }
+    int regNum = modrm.reg | (data->rex.r << 3); 
+    char source[20] = { 0 };
+    char destination[10] = { 0 };
+    data->index++;
+    if (modrm.mod == 0x00) {
+        sprintf(source, "(%%rip)+0x%x", get32BitValue(data));
+    } else {
+        sprintf(source, "(%%rbp)+0x%x", get8BitValue(data));
+    }
+    if ( data->opcode == 0x8B ) {
+        strcat(string, source);
+        strcat(string, ", ");
+        strcat(string, regValue2String(regNum, destination));
+    } else {
+        strcat(string, regValue2String(regNum, destination));
+        strcat(string, ", ");
+        strcat(string, source);
+    }
+    return string;
+}
 
 char* findRegisters(instructionData* data, char* string) {
     uint8_t modRMByte = data->instruction[data->index];
     ModRM modrm = { modRMByte >> 6, modRMByte >> 3, modRMByte};
-    if ( modrm.mod != 0x3 || (data->opcode == MUL && modrm.reg != 0x4) ||
-            data->rex.lowerNibble != 0x4 || !data->rex.w ) {
-        printf("%d\n", data->rex.lowerNibble);
+    if ( (data->opcode == MOV_MEM_REG || data->opcode == MOV_REG_MEM) && modrm.mod != 0x03 ) {
+       return decodeMoveInstruction(data, modrm, string); 
+    } else if ( modrm.mod != 0x03 || (data->opcode == MUL && modrm.reg != 0x4) ||
+        data->rex.lowerNibble != 0x4 || !data->rex.w ) {
         return NULL;
     }
     int firstReg = modrm.reg | (data->rex.r << 3); 
@@ -208,33 +249,17 @@ bool getExpectedParams(instructionData* data, int remaining) {
 
         if ( data->opcode == MOV_REG_MEM || data->opcode == MOV_MEM_REG ) {
             data->expectedParams[0] = MODrm;
-            if ( (data->instruction[data->index] & 0xc0) != 0xc0 ) {
-                data->expectedParams[1] = DISPLACEMENT_32;
-            }
             return true;
         }
     return false;
 }
 
 
-uint8_t get8BitValue(instructionData* data) {
-    return data->instruction[data->index];
-}
-
-
-uint32_t get32BitValue(instructionData* data) {
-    data->instruction += data->index;
-    uint32_t ret = *((uint32_t*) data->instruction);
-    data->instruction -= data->index;
-    return ret;
-}
-
 
 void printInstruction(instructionData* data) {
-    char result[50] = { 0 };
+    char result[60] = { 0 };
     char buffer[20] = { 0 };
     if ( !findOpcode(data, result) ) {
-        printf("%d\n", data->opcode);
         fprintf(stderr, "Unknown instruction\n");
         return;
     }
@@ -258,6 +283,7 @@ void printInstruction(instructionData* data) {
                 break;
             case RQ:
                 strcat(result, findGPR(data, buffer));
+                data->index++;
                 break;
             case MODrm:
                 if ( !findRegisters(data, result) ) {
@@ -290,7 +316,7 @@ void decode(int length, uint8_t* instruction) {
     }
     data.opcode = instruction[data.index];
     data.index++;
-    params expectedParams[3] = { NONE };
+    params expectedParams[4] = { NONE };
     data.expectedParams = expectedParams;
     if ( !getExpectedParams(&data, length - data.index) ) {
         fprintf(stderr, "Unknown instruction: Param fuckup\n");
