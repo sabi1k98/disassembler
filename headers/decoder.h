@@ -80,6 +80,11 @@ enum primary_opcodes {
     POP_REG64 = 0x58,
     INT3 = 0xCC,
     NOP = 0x90,
+    XOR_REG_IMM32 = 0X35,
+    ADD_REG_IMM32 = 0X05,
+    CMP_REG_IMM32 = 0x3D,
+    CMP_REG_MEM = 0x3B,
+    CMP_MEM_REG = 0x39,
     SECONDARY_ESCAPE = 0x0F /**< more of a prefix than opcode, this still belongs to the primary opcode table */
 };
 

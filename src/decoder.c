@@ -96,6 +96,30 @@ bool findOpcode(instructionData* data, char* string) {
     } else if ( data->opcode == NOP ) {
         sprintf(string, "%s", "nop"); 
         return true;
+    } else if ( data->opcode == CMP_REG_MEM || data->opcode == CMP_MEM_REG ) {
+        sprintf(string, "%s", "cmp"); 
+        return true;
+    } else if ( data->opcode == XOR_REG_IMM32 ) {
+        if ( data->rex.w ) {
+            sprintf(string, "%s", "xor\t%rax, "); 
+        } else {
+            sprintf(string, "%s", "xor\t%eax, "); 
+        }
+        return true;
+    } else if ( data->opcode == ADD_REG_IMM32 ) {
+        if ( data->rex.w ) {
+            sprintf(string, "%s", "add\t%rax, "); 
+        } else {
+            sprintf(string, "%s", "add\t%eax, "); 
+        }
+        return true;
+    } else if ( data->opcode == CMP_REG_IMM32 ) {
+        if ( data->rex.w ) {
+            sprintf(string, "%s", "cmp\t%rax, "); 
+        } else {
+            sprintf(string, "%s", "cmp\t%eax, "); 
+        }
+        return true;
     }
 
     return false;
@@ -125,7 +149,8 @@ bool getExpectedParams(uint8_t opcode, int remaining, params* params) {
             return true;
         }
 
-        if ( opcode == PUSH_IMM64 ) {
+        if ( opcode == PUSH_IMM64 || opcode == XOR_REG_IMM32 ||
+                opcode == ADD_REG_IMM32 || opcode == CMP_REG_IMM32 ) {
             if ( remaining == 4 ) {
                 params[0] = IMM64;
                 return true;
@@ -138,6 +163,14 @@ bool getExpectedParams(uint8_t opcode, int remaining, params* params) {
                 || (opcode >= POP_REG64 && opcode <= POP_REG64 + 0x07) ) {
             if ( remaining == 0 ) {
                 params[0] = RQ;
+                return true;
+            }
+            return false;
+        }
+
+        if ( opcode == CMP_REG_MEM || opcode == CMP_MEM_REG ) {
+            if ( remaining == 1 ) {
+                params[0] = MODrm;
                 return true;
             }
             return false;
@@ -200,10 +233,10 @@ void decode(int length, uint8_t* instruction) {
     instructionData data = {0, { 0 }, false, 0, NULL};
     if ( isREXprefix(instruction[data.index]) ) {
         data.rex.lowerNibble = (0xf0 | instruction[data.index]) >> 4;
-        data.rex.w = 0x8 | instruction[data.index];
-        data.rex.r = 0x4 | instruction[data.index];
-        data.rex.x = 0x2 | instruction[data.index];
-        data.rex.b = 0x1 | instruction[data.index];
+        data.rex.w = (0x8 & instruction[data.index]) >> 3;
+        data.rex.r = (0x4 & instruction[data.index]) >> 2;
+        data.rex.x = (0x2 & instruction[data.index]) >> 1;
+        data.rex.b = 0x1 & instruction[data.index];
         data.index++;
     }
     if ( isEscaped(instruction[data.index]) ) {
