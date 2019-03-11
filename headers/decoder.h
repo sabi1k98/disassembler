@@ -85,6 +85,9 @@ enum primary_opcodes {
     CMP_REG_IMM32 = 0x3D,
     CMP_REG_MEM = 0x3B,
     CMP_MEM_REG = 0x39,
+    MUL = 0xF7,
+    MOV_REG_MEM = 0x8B,
+    MOV_MEM_REG = 0x89,
     SECONDARY_ESCAPE = 0x0F /**< more of a prefix than opcode, this still belongs to the primary opcode table */
 };
 
@@ -100,7 +103,6 @@ enum operands {
 typedef int params;
 
 
-bool getExpectedParams(uint8_t opcode, int remaining, params* params);
 
 enum constants {
     MAX_BYTES = 15 /**< Maximum length of encoded instruction */
@@ -113,6 +115,7 @@ typedef struct instructionData {
     bool isEscaped;
     int index;
     params* expectedParams;
+    uint8_t* instruction;
 } instructionData;
 
 

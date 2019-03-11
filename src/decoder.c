@@ -20,9 +20,7 @@ bool findSecondaryOpcode(const uint8_t opcode, char* string) {
     return false;
 }
 
-char* findGPR(instructionData* data, char* string) {
-    int regValue;
-    regValue = data->opcode | (data->rex.b << 3) ;
+char* regValue2String(int regValue, char* string) {
     switch (regValue) {
         case RAX:
             strcat(string, "%rax");
@@ -56,6 +54,31 @@ char* findGPR(instructionData* data, char* string) {
             }
     }
     return string;
+}
+
+
+char* findGPR(instructionData* data, char* string) {
+    int regValue;
+    regValue = data->opcode | (data->rex.b << 3);
+        return regValue2String(regValue, string);
+}
+
+
+char* findRegisters(instructionData* data, char* string) {
+    uint8_t modRMByte = data->instruction[data->index];
+    ModRM modrm = { modRMByte >> 6, modRMByte >> 3, modRMByte};
+    if ( modrm.mod != 0x3 || (data->opcode == MUL && modrm.reg != 0x4) ||
+            data->rex.lowerNibble != 0x4 || !data->rex.w ) {
+        printf("%d\n", data->rex.lowerNibble);
+        return NULL;
+    }
+    int firstReg = modrm.reg | (data->rex.r << 3); 
+    int secondReg = modrm.rm | (data->rex.b << 3); 
+    if ( data->opcode != MUL ) {
+        regValue2String(firstReg, string);
+        strcat(string, ", ");
+    }
+    return regValue2String(secondReg, string);
 }
 
 bool findOpcode(instructionData* data, char* string) {
@@ -97,7 +120,13 @@ bool findOpcode(instructionData* data, char* string) {
         sprintf(string, "%s", "nop"); 
         return true;
     } else if ( data->opcode == CMP_REG_MEM || data->opcode == CMP_MEM_REG ) {
-        sprintf(string, "%s", "cmp"); 
+        sprintf(string, "%s", "cmp\t"); 
+        return true;
+    } else if ( data->opcode == MOV_REG_MEM || data->opcode == MOV_MEM_REG ) {
+        sprintf(string, "%s", "mov\t"); 
+        return true;
+    } else if ( data->opcode == MUL ) {
+        sprintf(string, "%s", "mul\t"); 
         return true;
     } else if ( data->opcode == XOR_REG_IMM32 ) {
         if ( data->rex.w ) {
@@ -126,73 +155,82 @@ bool findOpcode(instructionData* data, char* string) {
 }
 
 
-bool getExpectedParams(uint8_t opcode, int remaining, params* params) {
-        if ( opcode == JMP_REL8OFF || opcode == JE_REL8OFF || opcode == JNE_REL8OFF ||
-                opcode == JB_REL8OFF ) {
+bool getExpectedParams(instructionData* data, int remaining) {
+        if ( data->opcode == JMP_REL8OFF || data->opcode == JE_REL8OFF || data->opcode == JNE_REL8OFF ||
+                data->opcode == JB_REL8OFF ) {
             if ( remaining == 1) {
-                params[0] = DISPLACEMENT_8;
+                data->expectedParams[0] = DISPLACEMENT_8;
                 return true;
             }
             return false;
         }
 
-        if ( opcode == JMP_REL32OFF || opcode == JE_REL32OFF || opcode == JNE_REL32OFF ||
-                opcode == JB_REL32OFF || opcode == CALL_REL32OFF ) {
+        if ( data->opcode == JMP_REL32OFF || data->opcode == JE_REL32OFF || data->opcode == JNE_REL32OFF ||
+                data->opcode == JB_REL32OFF || data->opcode == CALL_REL32OFF ) {
             if ( remaining == 4 ) {
-                params[0] = DISPLACEMENT_32;
+                data->expectedParams[0] = DISPLACEMENT_32;
                 return true;
             }
             return false;
         }
 
-        if ( opcode == RET || opcode == INT3 || opcode == NOP ) {
+        if ( data->opcode == RET || data->opcode == INT3 || data->opcode == NOP ) {
             return true;
         }
 
-        if ( opcode == PUSH_IMM64 || opcode == XOR_REG_IMM32 ||
-                opcode == ADD_REG_IMM32 || opcode == CMP_REG_IMM32 ) {
+        if ( data->opcode == PUSH_IMM64 || data->opcode == XOR_REG_IMM32 ||
+                data->opcode == ADD_REG_IMM32 || data->opcode == CMP_REG_IMM32 ) {
             if ( remaining == 4 ) {
-                params[0] = IMM64;
+                data->expectedParams[0] = IMM64;
                 return true;
             }
             return false;
         }
 
 
-        if ( (opcode >= PUSH_REG64 && opcode <= PUSH_REG64 + 0x07)
-                || (opcode >= POP_REG64 && opcode <= POP_REG64 + 0x07) ) {
+        if ( (data->opcode >= PUSH_REG64 && data->opcode <= PUSH_REG64 + 0x07)
+                || (data->opcode >= POP_REG64 && data->opcode <= POP_REG64 + 0x07) ) {
             if ( remaining == 0 ) {
-                params[0] = RQ;
+                data->expectedParams[0] = RQ;
                 return true;
             }
             return false;
         }
 
-        if ( opcode == CMP_REG_MEM || opcode == CMP_MEM_REG ) {
+        if ( data->opcode == CMP_REG_MEM || data->opcode == CMP_MEM_REG ||
+                data->opcode == MUL ) {
             if ( remaining == 1 ) {
-                params[0] = MODrm;
+                data->expectedParams[0] = MODrm;
                 return true;
             }
             return false;
+        }
+
+        if ( data->opcode == MOV_REG_MEM || data->opcode == MOV_MEM_REG ) {
+            data->expectedParams[0] = MODrm;
+            if ( (data->instruction[data->index] & 0xc0) != 0xc0 ) {
+                data->expectedParams[1] = DISPLACEMENT_32;
+            }
+            return true;
         }
     return false;
 }
 
 
-uint8_t get8BitValue(const uint8_t* instruction, int start) {
-    return instruction[start];
+uint8_t get8BitValue(instructionData* data) {
+    return data->instruction[data->index];
 }
 
 
-uint32_t get32BitValue(const uint8_t* instruction, int start) {
-    instruction += start;
-    uint32_t ret = *((uint32_t*) instruction);
-    instruction -= start;
+uint32_t get32BitValue(instructionData* data) {
+    data->instruction += data->index;
+    uint32_t ret = *((uint32_t*) data->instruction);
+    data->instruction -= data->index;
     return ret;
 }
 
 
-void printInstruction(instructionData* data, uint8_t* instruction) {
+void printInstruction(instructionData* data) {
     char result[50] = { 0 };
     char buffer[20] = { 0 };
     if ( !findOpcode(data, result) ) {
@@ -204,22 +242,29 @@ void printInstruction(instructionData* data, uint8_t* instruction) {
     while( data->expectedParams[i] != NONE ) {
         switch ( data->expectedParams[i] ) {
             case DISPLACEMENT_8:
-                sprintf(buffer, "(%%rip)+0x%x", get8BitValue(instruction, data->index));
+                sprintf(buffer, "(%%rip)+0x%x", get8BitValue(data));
                 data->index++;
                 strcat(result, buffer);
                 break;
             case DISPLACEMENT_32:
-                sprintf(buffer, "(%%rip)+0x%x", get32BitValue(instruction, data->index));
+                sprintf(buffer, "(%%rip)+0x%x", get32BitValue(data));
                 data->index += 4;
                 strcat(result, buffer);
                 break;
             case IMM64:
-                sprintf(buffer, "$0x%x", get32BitValue(instruction, data->index));
+                sprintf(buffer, "$0x%x", get32BitValue(data));
                 data->index += 4;
                 strcat(result, buffer);
                 break;
             case RQ:
                 strcat(result, findGPR(data, buffer));
+                break;
+            case MODrm:
+                if ( !findRegisters(data, result) ) {
+                    printf("Unknown instruction: register fuckup\n");
+                    return;
+                }
+                data->index++;
                 break;
         }
         i++;
@@ -230,13 +275,13 @@ void printInstruction(instructionData* data, uint8_t* instruction) {
 
 
 void decode(int length, uint8_t* instruction) {
-    instructionData data = {0, { 0 }, false, 0, NULL};
+    instructionData data = {0, { 0 }, false, 0, NULL, instruction};
     if ( isREXprefix(instruction[data.index]) ) {
-        data.rex.lowerNibble = (0xf0 | instruction[data.index]) >> 4;
-        data.rex.w = (0x8 & instruction[data.index]) >> 3;
-        data.rex.r = (0x4 & instruction[data.index]) >> 2;
-        data.rex.x = (0x2 & instruction[data.index]) >> 1;
-        data.rex.b = 0x1 & instruction[data.index];
+        data.rex.lowerNibble = instruction[data.index] >> 4;
+        data.rex.w = instruction[data.index] >> 3;
+        data.rex.r = instruction[data.index] >> 2;
+        data.rex.x = instruction[data.index] >> 1;
+        data.rex.b = instruction[data.index];
         data.index++;
     }
     if ( isEscaped(instruction[data.index]) ) {
@@ -247,9 +292,9 @@ void decode(int length, uint8_t* instruction) {
     data.index++;
     params expectedParams[3] = { NONE };
     data.expectedParams = expectedParams;
-    if ( !getExpectedParams(data.opcode, length - data.index, expectedParams) ) {
-        fprintf(stderr, "Unknown instruction\n");
+    if ( !getExpectedParams(&data, length - data.index) ) {
+        fprintf(stderr, "Unknown instruction: Param fuckup\n");
         return;
     }
-    printInstruction(&data, instruction);
+    printInstruction(&data);
 }
