@@ -24,9 +24,10 @@ typedef struct ModRM {
 
 
 /**
- * @brief defines scale factor, index-register number,
+ * @brief operand which defines scale factor, index-register number,
  * and base_register number used for register-indirect
  * addressing mode
+ * Currently useless in this assignment, but might be used later
  */
 typedef struct SIB {
     uint8_t scale:2, /**< scale factor in computing effective address */
@@ -49,13 +50,6 @@ typedef struct REX {
             lowerNibble:4; /**< shall always be 0x4 */
 } REX;
 
-enum GPR_8bit {
-    AL, CL, DL, BL, AH, CH, DH, BH
-};
-
-enum GPR_16bit {
-    AX, CX, DX, BX, SP, BP, SI, DI
-};
 
 enum GPR_32bit {
     EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI
@@ -66,6 +60,9 @@ enum GPR_64bit {
     R8, R9, R10, R11, R12, R13, R14, R15
 };
 
+/**
+ * @brief opcodes from primary table
+ */
 enum primary_opcodes {
     JMP_REL8OFF = 0xEB,
     JMP_REL32OFF = 0xE9,
@@ -110,12 +107,12 @@ enum constants {
 
 
 typedef struct instructionData {
-    uint8_t opcode;
-    REX rex;
-    bool isEscaped;
-    int index;
-    params* expectedParams;
-    uint8_t* instruction;
+    uint8_t opcode; /**< instruction opcode */
+    REX rex; /**< REX prefix, only valid when first 4 bits form 0x4 */
+    bool isEscaped; /**< sets to true if escape byte is found */
+    int index; /**< index in decoded instruction */
+    params* expectedParams; /**< array which helps us interpret following bytes */
+    uint8_t* instruction; /**< array of bytes forming the decoded instruction */
 } instructionData;
 
 

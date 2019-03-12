@@ -36,38 +36,9 @@ bool findSecondaryOpcode(const uint8_t opcode, char* string) {
 }
 
 char* regValue2String(int regValue, char* string) {
-    switch (regValue) {
-        case RAX:
-            strcat(string, "%rax");
-            break;
-        case RCX:
-            strcat(string, "%rcx");
-            break;
-        case RDX:
-            strcat(string, "%rdx");
-            break;
-        case RBX:
-            strcat(string, "%rbx");
-            break;
-        case RSP:
-            strcat(string, "%rsp");
-            break;
-        case RBP:
-            strcat(string, "%rbp");
-            break;
-        case RSI:
-            strcat(string, "%rsi");
-            break;
-        case RDI:
-            strcat(string, "%rdi");
-            break;
-        default:{
-            char buffer[5] = { 0 };
-            sprintf(buffer, "%%r%d", regValue);
-            strcat(string, buffer);
-            break;
-            }
-    }
+    const char* registry [16] = { "%rax", "%rcx", "%rdx", "%rbx", "%rsp", "%rbp", "%rsi", "%rdi",
+   				"%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15" };
+    strcat(string, registry[regValue]);
     return string;
 }
 
@@ -125,6 +96,29 @@ char* findRegisters(instructionData* data, char* string) {
 bool findOpcode(instructionData* data, char* string) {
     if ( data->isEscaped ) {
         return findSecondaryOpcode(data->opcode, string);
+    }
+    const char *opcodes[256] = {
+	[0x05] = "add",
+	[0x35] = "xor",
+	[0x39] = "cmp",
+	[0x3B] = "cmp",
+	[0x3D] = "cmp",
+	[0x50] = "push",
+	[0x58] = "pop",
+	[0x68] = "push",
+	[0x72] = "jb",
+	[0x74] = "je",
+	[0x75] = "jne",
+    	[0x84] = "je",
+	[0x89] = "mov",
+	[0x8B] = "mov",
+	[0x90] = "nop",
+	[0xC3] = "ret",
+	[0xCC] = "int3",
+	[0xE8] = "call",
+	[0xE9] = "jmp",
+    	[0xEB] = "jmp",
+	[0xF7] = "mul"
     }
     //printf("%x\n", opcode);
     if ( data->opcode == JMP_REL8OFF || data->opcode == JMP_REL32OFF ) {
@@ -287,7 +281,7 @@ void printInstruction(instructionData* data) {
                 break;
             case MODrm:
                 if ( !findRegisters(data, result) ) {
-                    printf("Unknown instruction: register fuckup\n");
+                    printf("Unknown instruction\n");
                     return;
                 }
                 data->index++;
@@ -319,7 +313,7 @@ void decode(int length, uint8_t* instruction) {
     params expectedParams[4] = { NONE };
     data.expectedParams = expectedParams;
     if ( !getExpectedParams(&data, length - data.index) ) {
-        fprintf(stderr, "Unknown instruction: Param fuckup\n");
+        fprintf(stderr, "Unknown instruction:\n");
         return;
     }
     printInstruction(&data);
