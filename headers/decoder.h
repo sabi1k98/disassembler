@@ -15,6 +15,10 @@
 #include <string.h>
 
 
+#define MAX_BYTES 15
+#define REGISTER_AMMOUNT 16
+#define TABLE_SIZE 256
+#define TOP_4_BYTES 0xF0
 
 typedef struct ModRM {
     uint8_t mod:2, /**< addressing mode */
@@ -50,10 +54,6 @@ typedef struct REX {
             lowerNibble:4; /**< shall always be 0x4 */
 } REX;
 
-
-enum GPR_32bit {
-    EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI
-};
 
 enum GPR_64bit {
     RAX, RCX, RDX, RBX, RSP, RBP, RSI, RDI,
@@ -94,18 +94,22 @@ enum secondary_opcodes {
 };
 
 enum operands {
-    NONE, DISPLACEMENT_8, DISPLACEMENT_32, MODrm, S_I_B, IMM64, RQ, ERROR
+    NONE,
+    DISPLACEMENT_8,
+    DISPLACEMENT_32, 
+    MODrm, 
+    S_I_B, 
+    IMM64, 
+    RQ /**< register encoded in opcode itself */
 };
 
 typedef int params;
 
 
-
-enum constants {
-    MAX_BYTES = 15 /**< Maximum length of encoded instruction */
-};
-
-
+/**
+ *  @brief Struct containing intermeddiate results
+ *  from decoding instructions
+ * */
 typedef struct instructionData {
     uint8_t opcode; /**< instruction opcode */
     REX rex; /**< REX prefix, only valid when first 4 bits form 0x4 */
@@ -116,19 +120,51 @@ typedef struct instructionData {
 } instructionData;
 
 
-
+/**
+ *  @brief checks if byte is REX prefix
+ *  @param byte: tested byte
+ *  @return true if byte is a valid REX prefix
+ * */
 bool isREXprefix(const uint8_t byte);
 
-uint8_t ge8BitDisplacement(const uint8_t* instruction, int start);
 
-uint32_t get32BitDisplacement(const uint8_t* instruction, int start);
+uint8_t ge8BitValue(instructionData* instruction);
+
+
+uint32_t get32BitValue(instructionData* instruction);
+
+
+bool isEscaped(const uint8_t instruction);
+
+
+bool findSecondaryOpcode(const uint8_t opcode, char* string);
+
+
+char* regValue2String(int regValue, char* string);
+
+
+char* findGPR(instructionData* data, char* string);
+
+
+char* decodeMoveInstruction(instructionData* data, ModRM modrm, char* string);
+
 
 void decode(int length, uint8_t* instruction);
 
+
+char* findRegisters(instructionData* data, char* string);
+
+
+bool findOpcode(instructionData* data, char* string);
+
+
+void getExpectedParams(instructionData* data);
+
+
 bool opcodeToString(instructionData* data, char* string);
 
-bool decodeOpcode(uint8_t opcode);
 
-REX storeREX(uint8_t prefix);
+void getExpectedParams(instructionData* data);
+
 
 #endif

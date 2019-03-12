@@ -1,9 +1,9 @@
 IDIR =headers
 CC=clang
 CFLAGS=-I $(IDIR) -g -Wextra -Wall -pedantic
-
+#.o files dir
 ODIR=src/obj
-
+#.c files dir
 CDIR=src
 
 _DEPS = decoder.h
