@@ -137,9 +137,10 @@ uint32_t get32BitValue(instructionData* instruction);
 bool isEscaped(const uint8_t instruction);
 
 
+//finds opcode from secondary opcode table
 bool findSecondaryOpcode(const uint8_t opcode, char* string);
 
-
+//decodes register value into string
 char* regValue2String(int regValue, char* string);
 
 
