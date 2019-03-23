@@ -13,14 +13,19 @@ bool strHex2Bin(int argc, const char** argv, uint8_t* result) {
 }
 
 
+int loadBinaryStdin(uint8_t* instruction) {
+   freopen(NULL, "rb", stdin); 
+   return fread(instruction, 1, MAX_SIZE, stdin);
+}
+
+
 int main(int argc, const char* argv[]) {
     //according to the amd64 manual, the total instruction length
     //can not be longer than 15 bytes
-    if ( argc > MAX_BYTES ) { 
-        return EXIT_FAILURE;
-    }
-    uint8_t instruction[MAX_BYTES] = { 0 };
-    if ( !strHex2Bin(argc, argv, instruction) ) {
+    uint8_t instruction[MAX_SIZE] = { 0 };
+    if ( argc == 1 ) {
+        argc = loadBinaryStdin(instruction);
+    } else if ( !strHex2Bin(argc, argv, instruction) ) {
         return EXIT_FAILURE;
     }
     decode(argc - 1, instruction);

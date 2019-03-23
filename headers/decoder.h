@@ -15,7 +15,7 @@
 #include <string.h>
 
 
-#define MAX_BYTES 15
+#define MAX_SIZE 2048
 #define REGISTER_AMMOUNT 16
 #define TABLE_SIZE 256
 #define TOP_4_BYTES 0xF0

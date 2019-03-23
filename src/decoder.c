@@ -28,8 +28,13 @@ bool findSecondaryOpcode(const uint8_t opcode, char* string) {
     if ( opcode == JNE_REL32OFF ) {
         sprintf(string, "%s\t", "jne");
         return true; 
-    } else if ( opcode == JB_REL32OFF ) { 
+    }
+    if ( opcode == JB_REL32OFF ) { 
         sprintf(string, "%s\t", "jb");
+        return true; 
+    }
+    if ( opcode == JE_REL32OFF ) { 
+        sprintf(string, "%s\t", "je");
         return true; 
     }
     return false;
@@ -118,7 +123,6 @@ bool findOpcode(instructionData* data, char* string) {
 	[0x72] = "jb",
 	[0x74] = "je",
 	[0x75] = "jne",
-    [0x84] = "je",
 	[0x89] = "mov", [0x8B] = "mov",
 	[0x90] = "nop",
 	[0xC3] = "ret",
@@ -138,7 +142,6 @@ bool findOpcode(instructionData* data, char* string) {
         } else {
             strcat(string, "\t%eax, "); 
         }
-        return true;
     }
     strcat(string, "\t");
     return true;
@@ -177,18 +180,18 @@ void getExpectedParams(instructionData* data) {
 
 
 
-void printInstruction(instructionData* data, int length) {
+bool printInstruction(instructionData* data, int length) {
     char result[60] = { 0 };
     char buffer[20] = { 0 };
     if ( !findOpcode(data, result) ) {
         fprintf(stderr, "Unknown instruction\n");
-        return;
+        return false;
     }
     int i = 0;
     while( data->expectedParams[i] != NONE ) {
         if ( i == length ) {
             printf("Unknown instruction\n");
-            return;
+            return false;
         }
         switch ( data->expectedParams[i] ) {
             case DISPLACEMENT_8:
@@ -197,11 +200,19 @@ void printInstruction(instructionData* data, int length) {
                 strcat(result, buffer);
                 break;
             case DISPLACEMENT_32:
+                if ( data->index + 3 > length ) {
+                    printf("Unknown instruction\n");
+                    return false; 
+                }
                 sprintf(buffer, "$0x%x(%%rip)", get32BitValue(data));
                 data->index += sizeof(uint32_t);
                 strcat(result, buffer);
                 break;
             case IMM64:
+                if ( data->index + 3 > length ) {
+                    printf("Unknown instruction\n");
+                    return false;
+                }
                 sprintf(buffer, "$0x%x", get32BitValue(data));
                 data->index += sizeof(uint32_t);
                 strcat(result, buffer);
@@ -210,12 +221,11 @@ void printInstruction(instructionData* data, int length) {
                 if ( findGPR(data, buffer) ) {
                     strcat(result, buffer);
                 }
-                data->index++;
                 break;
             case MODrm:
                 if ( !findRegisters(data, result) ) {
                     printf("Unknown instruction\n");
-                    return;
+                    return false;
                 }
                 data->index++;
                 break;
@@ -223,28 +233,43 @@ void printInstruction(instructionData* data, int length) {
         i++;
     }
     printf("%s\n", result);
+    return true;
 }
 
+
+void clearInstructionData(instructionData* data) {
+    data->isEscaped = false;
+    data->opcode = 0;
+    data->rex.lowerNibble = 0; //setting rex to invalid prefix
+    for ( int i = 0; i < 4; i++ ) {
+        data->expectedParams[i] = NONE;
+    }
+}
 
 
 void decode(int length, uint8_t* instruction) {
     instructionData data = {0, { 0 }, false, 0, NULL, instruction};
-    if ( isREXprefix(instruction[data.index]) ) {
-        data.rex.lowerNibble = instruction[data.index] >> 4;
-        data.rex.w = instruction[data.index] >> 3;
-        data.rex.r = instruction[data.index] >> 2;
-        data.rex.x = instruction[data.index] >> 1;
-        data.rex.b = instruction[data.index];
+    while ( data.index <= length ) {
+        if ( isREXprefix(instruction[data.index]) ) {
+            data.rex.lowerNibble = instruction[data.index] >> 4;
+            data.rex.w = instruction[data.index] >> 3;
+            data.rex.r = instruction[data.index] >> 2;
+            data.rex.x = instruction[data.index] >> 1;
+            data.rex.b = instruction[data.index];
+            data.index++;
+        }
+        if ( isEscaped(instruction[data.index]) ) {
+            data.isEscaped = true;
+            data.index++;
+        }
+        data.opcode = instruction[data.index];
         data.index++;
+        params expectedParams[4] = { NONE };
+        data.expectedParams = expectedParams;
+        getExpectedParams(&data);
+        if ( !printInstruction(&data, length) ) {
+            return;
+        };
+        clearInstructionData(&data);
     }
-    if ( isEscaped(instruction[data.index]) ) {
-        data.isEscaped = true;
-        data.index++;
-    }
-    data.opcode = instruction[data.index];
-    data.index++;
-    params expectedParams[4] = { NONE };
-    data.expectedParams = expectedParams;
-    getExpectedParams(&data);
-    printInstruction(&data, length);
 }
