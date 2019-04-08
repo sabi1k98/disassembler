@@ -117,6 +117,7 @@ typedef struct instructionData {
     int index; /**< index in decoded instruction */
     params* expectedParams; /**< array which helps us interpret following bytes */
     uint8_t* instruction; /**< array of bytes forming the decoded instruction */
+    uint32_t basicBlocks[2048];
 } instructionData;
 
 
@@ -128,10 +129,10 @@ typedef struct instructionData {
 bool isREXprefix(const uint8_t byte);
 
 
-uint8_t ge8BitValue(instructionData* instruction);
+int8_t ge8BitValue(instructionData* instruction);
 
 
-uint32_t get32BitValue(instructionData* instruction);
+int32_t get32BitValue(instructionData* instruction);
 
 
 bool isEscaped(const uint8_t instruction);

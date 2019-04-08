@@ -4,7 +4,7 @@
 
 
 bool strHex2Bin(int argc, const char** argv, uint8_t* result) {
-    for ( int i=1 ; i < argc ; i++ ) {
+    for ( int i = 1; i < argc; i++ ) {
         if ( sscanf(argv[i], " %hhx ", &result[i - 1]) != 1 ) {
             return false;
         }
@@ -24,10 +24,10 @@ int main(int argc, const char* argv[]) {
     //can not be longer than 15 bytes
     uint8_t instruction[MAX_SIZE] = { 0 };
     if ( argc == 1 ) {
-        argc = loadBinaryStdin(instruction);
+        argc = loadBinaryStdin(instruction) + 2;
     } else if ( !strHex2Bin(argc, argv, instruction) ) {
         return EXIT_FAILURE;
     }
-    decode(argc - 1, instruction);
+    decode(argc - 2, instruction);
     return EXIT_SUCCESS;
 }
