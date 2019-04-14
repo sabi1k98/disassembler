@@ -204,8 +204,7 @@ void writeLabelIndex(instructionData* data, uint32_t jumpTo) {
 }
 
 
-bool printInstruction(instructionData* data, int length) {
-    char result[60] = { 0 };
+bool decodeInstruction(instructionData* data, int length, char result[20]) {
     char buffer[20] = { 0 };
     if ( !findOpcode(data, result) ) {
         fprintf(stderr, "Unknown instruction\n");
@@ -221,6 +220,7 @@ bool printInstruction(instructionData* data, int length) {
         switch ( data->expectedParams[i] ) {
             case DISPLACEMENT_8:
                 sprintf(buffer, "%x", computeAddress(data->index, (address = get8BitValue(data))));
+                writeLabelIndex(data, data->index + 1);
                 writeLabelIndex(data, computeAddress(data->index, address));
                 strcat(result, buffer);
                 sprintf(buffer, "  #<BB%d>", searchLabelIndex(data, computeAddress(data->index, address)));
@@ -233,6 +233,7 @@ bool printInstruction(instructionData* data, int length) {
                     return false; 
                 }
                 sprintf(buffer, "%x", computeAddress(data->index, (address = get32BitValue(data))));
+                writeLabelIndex(data, data->index + 1);
                 writeLabelIndex(data, computeAddress(data->index, address));
                 strcat(result, buffer);
                 sprintf(buffer, "  #<BB%d>", searchLabelIndex(data, computeAddress(data->index, address)));
@@ -263,7 +264,6 @@ bool printInstruction(instructionData* data, int length) {
         }
         i++;
     }
-    printf("%s\n", result);
     return true;
 }
 
@@ -272,41 +272,52 @@ void clearInstructionData(instructionData* data) {
     data->isEscaped = false;
     data->opcode = 0;
     data->rex.lowerNibble = 0; //setting rex to invalid prefix
-    for ( int i = 0; i < 4; i++ ) {
-        data->expectedParams[i] = NONE;
+}
+
+void decodeREX(instructionData* data, uint8_t* instruction) {
+    if ( isREXprefix(instruction[data->index]) ) {
+        data->rex.lowerNibble = instruction[data->index] >> 4;
+        data->rex.w = instruction[data->index] >> 3;
+        data->rex.r = instruction[data->index] >> 2;
+        data->rex.x = instruction[data->index] >> 1;
+        data->rex.b = instruction[data->index];
+        data->index++;
     }
 }
 
-void decode(int length, uint8_t* instruction) {
+
+bool decodeSingleInstruction(int length, uint8_t* instruction, instructionData* data, char* strInstr) {
+    memset(strInstr, '\0', 20);
+    int labelIndex = searchLabelIndex(data, data->index);
+    if ( labelIndex != -1 ) {
+        printf("BB%d:\n", labelIndex);
+    }
+    printf("%x:\t", data->index);
+    
+    if ( isEscaped(instruction[data->index]) ) {
+        data->isEscaped = true;
+        data->index++;
+    }
+    decodeREX(data, instruction);
+    data->opcode = instruction[data->index];
+    data->index++;
+    params expectedParams[4] = { NONE };
+    data->expectedParams = expectedParams;
+    getExpectedParams(data);
+    return decodeInstruction(data, length, strInstr);
+}
+
+
+void decodeAll(int length, uint8_t* instruction) {
     instructionData data = {0, { 0 }, false, 0, NULL, instruction, { 0 }};
     memset(data.basicBlocks, 0xff, 2048 * 4);
     data.basicBlocks[0] = 0x0;
+    char strInstr[20];
     while ( data.index < length ) {
-        int labelIndex = searchLabelIndex(&data, data.index);
-        if ( labelIndex != -1) {
-            printf("BB%d:\n", labelIndex);
-        }
-        printf("%x:\t", data.index);
-        if ( isREXprefix(instruction[data.index]) ) {
-            data.rex.lowerNibble = instruction[data.index] >> 4;
-            data.rex.w = instruction[data.index] >> 3;
-            data.rex.r = instruction[data.index] >> 2;
-            data.rex.x = instruction[data.index] >> 1;
-            data.rex.b = instruction[data.index];
-            data.index++;
-        }
-        if ( isEscaped(instruction[data.index]) ) {
-            data.isEscaped = true;
-            data.index++;
-        }
-        data.opcode = instruction[data.index];
-        data.index++;
-        params expectedParams[4] = { NONE };
-        data.expectedParams = expectedParams;
-        getExpectedParams(&data);
-        if ( !printInstruction(&data, length) ) {
+        if ( !decodeSingleInstruction(length, instruction, &data, strInstr) ) {
             return;
-        };
+        }
+        printf("%s\n", strInstr);
         clearInstructionData(&data);
     }
 }

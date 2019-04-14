@@ -151,7 +151,7 @@ char* findGPR(instructionData* data, char* string);
 char* decodeMoveInstruction(instructionData* data, ModRM modrm, char* string);
 
 
-void decode(int length, uint8_t* instruction);
+void decodeAll(int length, uint8_t* instruction);
 
 
 char* findRegisters(instructionData* data, char* string);
