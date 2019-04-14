@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef DECODE
 #include "decoder.h"
+#endif
+#ifdef CFG
+#include "cfg.h"
+#endif
 
 
 bool strHex2Bin(int argc, const char** argv, uint8_t* result) {
@@ -30,6 +35,9 @@ int main(int argc, const char* argv[]) {
     }
     #ifdef DECODE
     decodeAll(argc - 2, instruction);
+    #endif
+    #ifdef CFG
+    makeGraph(argc - 2, instruction);
     #endif
     return EXIT_SUCCESS;
 }

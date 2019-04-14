@@ -288,10 +288,6 @@ void decodeREX(instructionData* data, uint8_t* instruction) {
 
 bool decodeSingleInstruction(int length, uint8_t* instruction, instructionData* data, char* strInstr) {
     memset(strInstr, '\0', 20);
-    int labelIndex = searchLabelIndex(data, data->index);
-    if ( labelIndex != -1 ) {
-        printf("BB%d:\n", labelIndex);
-    }
     printf("%x:\t", data->index);
     
     if ( isEscaped(instruction[data->index]) ) {
@@ -314,6 +310,10 @@ void decodeAll(int length, uint8_t* instruction) {
     data.basicBlocks[0] = 0x0;
     char strInstr[20];
     while ( data.index < length ) {
+        int labelIndex = searchLabelIndex(&data, data.index);
+        if ( labelIndex != -1 ) {
+            printf("BB%d:\n", labelIndex);
+        }
         if ( !decodeSingleInstruction(length, instruction, &data, strInstr) ) {
             return;
         }

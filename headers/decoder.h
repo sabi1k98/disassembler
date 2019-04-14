@@ -156,6 +156,7 @@ void decodeAll(int length, uint8_t* instruction);
 
 char* findRegisters(instructionData* data, char* string);
 
+bool decodeSingleInstruction(int length, uint8_t* instruction, instructionData* data, char* strInstr);
 
 //finds opcode in primary opcode table
 bool findOpcode(instructionData* data, char* string);
@@ -168,6 +169,10 @@ bool opcodeToString(instructionData* data, char* string);
 
 
 void getExpectedParams(instructionData* data);
+
+void clearInstructionData(instructionData* data);
+
+int searchLabelIndex(instructionData* data, uint32_t jumpTo);
 
 
 #endif

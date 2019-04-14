@@ -12,6 +12,6 @@
 
 
 
-bool makeGraph(int length, uint8_t* instructions);
+void makeGraph(int length, uint8_t* instructions);
 
 #endif
