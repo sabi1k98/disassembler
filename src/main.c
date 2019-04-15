@@ -29,15 +29,15 @@ int main(int argc, const char* argv[]) {
     //can not be longer than 15 bytes
     uint8_t instruction[MAX_SIZE] = { 0 };
     if ( argc == 1 ) {
-        argc = loadBinaryStdin(instruction) + 2;
+        argc = loadBinaryStdin(instruction) + 1;
     } else if ( !strHex2Bin(argc, argv, instruction) ) {
         return EXIT_FAILURE;
     }
     #ifdef DECODE
-    decodeAll(argc - 2, instruction);
+    decodeAll(argc - 1, instruction);
     #endif
     #ifdef CFG
-    makeGraph(argc - 2, instruction);
+    makeGraph(argc - 1, instruction);
     #endif
     return EXIT_SUCCESS;
 }

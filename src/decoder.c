@@ -11,7 +11,7 @@ bool isEscaped(const uint8_t instruction) {
 
 
 int8_t get8BitValue(instructionData* data) {
-    return data->instruction[data->index];
+    return data->instruction[data->index++];
 }
 
 
@@ -19,11 +19,12 @@ int32_t get32BitValue(instructionData* data) {
     data->instruction += data->index;
     uint32_t ret = *((uint32_t*) data->instruction);
     data->instruction -= data->index;
+    data->index += 4;
     return ret;
 }
 
 uint32_t computeAddress(uint32_t current, uint32_t relative) {
-    return current + (int32_t)relative + 1;
+    return current + (int32_t)relative;
 }
 
 
@@ -64,6 +65,9 @@ char* findGPR(instructionData* data, char* string) {
     return regValue2String(regValue, string);
 }
 
+void sprintSignedHex(int32_t num, char* dest) {
+    sprintf(dest, "%s0x%x", num < 0 ? "-" : "", num < 0 ? -num : num);
+}
 
 char* decodeMoveInstruction(instructionData* data, ModRM modrm, char* string) { 
     if ( modrm.rm != 0x5) { //ONLY 0b101 as r/m can encode RIP-relative addressing
@@ -73,10 +77,12 @@ char* decodeMoveInstruction(instructionData* data, ModRM modrm, char* string) {
     char source[20] = { 0 };
     char destination[10] = { 0 };
     data->index++;
+    uint32_t offset = get32BitValue(data);
+    sprintSignedHex(offset, source);
     if (modrm.mod == 0x00) { //RIP-relative addressing
-        sprintf(source, "0x%x(%%rip)", get32BitValue(data));
+        strcat(source, "(%rip)");
     } else { //base + offset with RBP as base
-        sprintf(source, "0x%x(%%rbp)", get8BitValue(data));
+        strcat(source, "(%rbp)");
     }
     if ( data->opcode == MOV_REG_MEM ) {
         strcat(string, source);
@@ -95,7 +101,8 @@ char* findRegisters(instructionData* data, char* string) {
     ModRM modrm = { modRMByte >> 6, modRMByte >> 3, modRMByte};
     if ( (data->opcode == MOV_MEM_REG || data->opcode == MOV_REG_MEM) && modrm.mod != 0x03 ) {
        return decodeMoveInstruction(data, modrm, string); 
-    } else if ( modrm.mod != 0x03 || (data->opcode == MUL && modrm.reg != 0x4) ||
+    }
+    if ( modrm.mod != 0x03 || (data->opcode == MUL && modrm.reg != 0x4) ||
         data->rex.lowerNibble != 0x4 || !data->rex.w ) {
         return NULL;
     }
@@ -138,15 +145,15 @@ bool findOpcode(instructionData* data, char* string) {
         return false;
     }
     strcat(string, primaryTable[data->opcode]);
+    strcat(string, "\t");
     if ( data->opcode == XOR_REG_IMM32 || data->opcode == CMP_REG_IMM32
             || data->opcode == ADD_REG_IMM32 ) {
         if ( data->rex.w ) {
-            strcat(string, "\t%rax, "); 
+            strcat(string, "%rax,"); 
         } else {
-            strcat(string, "\t%eax, "); 
+            strcat(string, "%eax,"); 
         }
     }
-    strcat(string, "\t");
     return true;
 }
 
@@ -204,7 +211,7 @@ void writeLabelIndex(instructionData* data, uint32_t jumpTo) {
         if ( data->basicBlocks[i].to == 0xffffffff ) {
             data->basicBlocks[i].from = data->index;
             data->basicBlocks[i].to = jumpTo;
-            data->basicBlocks[i].fromBB = data->currentBB;
+            data->basicBlocks[i].fromBB = jumpTo > (uint32_t)data->index ? data->currentBB : data->currentBB + 1;
             return;
         }
     }
@@ -227,12 +234,14 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
         switch ( data->expectedParams[i] ) {
             case DISPLACEMENT_8:
                 sprintf(buffer, "%x", computeAddress(data->index, (address = get8BitValue(data))));
-                writeLabelIndex(data, data->index + 1);
+                if ( data->opcode != JMP_REL8OFF && data->opcode != JMP_REL32OFF && 
+                        (length > data->index || address <= 0) ) {
+                    writeLabelIndex(data, data->index);
+                }
                 writeLabelIndex(data, computeAddress(data->index, address));
                 strcat(result, buffer);
                 sprintf(buffer, "  #<BB-0x%x>", computeAddress(data->index, address));
                 strcat(result, buffer);
-                data->index++;
                 break;
             case DISPLACEMENT_32:
                 if ( data->index + 3 > length ) {
@@ -240,12 +249,14 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                     return false; 
                 }
                 sprintf(buffer, "%x", computeAddress(data->index, (address = get32BitValue(data))));
-                writeLabelIndex(data, data->index + 1);
+                if ( data->opcode != JMP_REL8OFF && data->opcode != JMP_REL32OFF && 
+                        (length > data->index || address <= 0) ) {
+                    writeLabelIndex(data, data->index);
+                }
                 writeLabelIndex(data, computeAddress(data->index, address));
                 strcat(result, buffer);
                 sprintf(buffer, "  #<BB-0x%x>", computeAddress(data->index, address));
                 strcat(result, buffer);
-                data->index += sizeof(uint32_t);
                 break;
             case IMM64:
                 if ( data->index + 3 > length ) {
@@ -253,7 +264,6 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                     return false;
                 }
                 sprintf(buffer, "$0x%x", get32BitValue(data));
-                data->index += sizeof(uint32_t);
                 strcat(result, buffer);
                 break;
             case RQ:
@@ -266,7 +276,6 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                     printf("Unknown instruction\n");
                     return false;
                 }
-                data->index++;
                 break;
         }
         i++;
@@ -293,14 +302,12 @@ void decodeREX(instructionData* data, uint8_t* instruction) {
 
 
 bool decodeSingleInstruction(int length, uint8_t* instruction, instructionData* data, char* strInstr) {
-    memset(strInstr, '\0', 20);
-    printf("%x:\t", data->index);
-    
+    memset(strInstr, '\0', 20); 
+    decodeREX(data, instruction);
     if ( isEscaped(instruction[data->index]) ) {
         data->isEscaped = true;
         data->index++;
     }
-    decodeREX(data, instruction);
     data->opcode = instruction[data->index];
     data->index++;
     params expectedParams[4] = { NONE };
@@ -314,18 +321,27 @@ void decodeAll(int length, uint8_t* instruction) {
     instructionData data = {0, { 0 }, false, 0, NULL, instruction, { {0, 0, 0, 0} }, 0};
     memset(data.basicBlocks, 0xff, 2048 * sizeof(transition));
     data.basicBlocks[0].to = 0x0;
-    char strInstr[20];
+    char strInstr[2048][30] = { { 0 } };
     while ( data.index < length ) {
         int labelIndex = searchLabelIndex(&data, data.index);
         if ( labelIndex != -1 ) {
-            printf("BB-0x%x:\n", data.index);
             data.currentBB++;
             assignFromBB(&data, data.index, data.currentBB);
         }
-        if ( !decodeSingleInstruction(length, instruction, &data, strInstr) ) {
+        if ( !decodeSingleInstruction(length, instruction, &data, strInstr[data.index]) ) {
             return;
         }
-        printf("%s\n", strInstr);
         clearInstructionData(&data);
+    }
+    for ( int i = 0; i < 2048; i++ ) {
+        if ( !strInstr[i][0] ) {
+            continue;
+        }
+        int labelIndex = searchLabelIndex(&data, i);
+        if ( labelIndex != -1 ) {
+            printf("BB-0x%x:\n", i);
+        }
+        printf("%x:\t", i);
+        printf("%s\n", strInstr[i]);
     }
 }
