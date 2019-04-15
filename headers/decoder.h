@@ -46,7 +46,7 @@ typedef struct SIB {
  * byte formats by 1 bit - this grants access
  * to 8 more extended GPR and YMM/XMM registers
  */
-typedef struct REX {
+typedef struct {
     uint8_t b:1, /**< extends ModRM.r/m to 4 bits */
             x:1, /**< extends SIB.reg to 4 bits */
             r:1, /**< extends ModRM.reg to 4 bits */
@@ -54,6 +54,12 @@ typedef struct REX {
             lowerNibble:4; /**< shall always be 0x4 */
 } REX;
 
+typedef struct {
+    uint32_t from;
+    uint32_t to;
+    int fromBB;
+    int toBB;
+} transition;
 
 enum GPR_64bit {
     RAX, RCX, RDX, RBX, RSP, RBP, RSI, RDI,
@@ -117,7 +123,8 @@ typedef struct instructionData {
     int index; /**< index in decoded instruction */
     params* expectedParams; /**< array which helps us interpret following bytes */
     uint8_t* instruction; /**< array of bytes forming the decoded instruction */
-    uint32_t basicBlocks[2048];
+    transition basicBlocks[2048];
+    int currentBB;
 } instructionData;
 
 
@@ -174,5 +181,9 @@ void clearInstructionData(instructionData* data);
 
 int searchLabelIndex(instructionData* data, uint32_t jumpTo);
 
+uint32_t computeAddress(uint32_t current, uint32_t relative);
 
+void assignFromBB(instructionData* data, uint32_t toAddr, int bb);
+
+void writeLabelIndex(instructionData* data, uint32_t jumpTo);
 #endif

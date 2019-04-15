@@ -182,9 +182,17 @@ void getExpectedParams(instructionData* data) {
 }
 
 
+void assignFromBB(instructionData* data, uint32_t toAddr, int bb) {
+    for ( int i = 0; data->basicBlocks[i].to < 0xffffff; i++ ) {
+        if ( toAddr == data->basicBlocks[i].to ) {
+            data->basicBlocks[i].toBB = bb;
+        }
+    }
+}
+
 int searchLabelIndex(instructionData* data, uint32_t jumpTo) {
     for ( int i = 0; i < 2048; i++ ) {
-        if ( data->basicBlocks[i] == jumpTo ) {
+        if ( data->basicBlocks[i].to == jumpTo ) {
             return i;
         }
     }
@@ -192,12 +200,11 @@ int searchLabelIndex(instructionData* data, uint32_t jumpTo) {
 }
 
 void writeLabelIndex(instructionData* data, uint32_t jumpTo) {
-    if (searchLabelIndex(data, jumpTo) != -1) {
-        return;
-    }
     for ( int i = 0; i < 2048; i++ ) {
-        if ( data->basicBlocks[i] == 0xffffffff ) {
-            data->basicBlocks[i] = jumpTo;
+        if ( data->basicBlocks[i].to == 0xffffffff ) {
+            data->basicBlocks[i].from = data->index;
+            data->basicBlocks[i].to = jumpTo;
+            data->basicBlocks[i].fromBB = data->currentBB;
             return;
         }
     }
@@ -223,7 +230,7 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                 writeLabelIndex(data, data->index + 1);
                 writeLabelIndex(data, computeAddress(data->index, address));
                 strcat(result, buffer);
-                sprintf(buffer, "  #<BB%d>", searchLabelIndex(data, computeAddress(data->index, address)));
+                sprintf(buffer, "  #<BB-0x%x>", computeAddress(data->index, address));
                 strcat(result, buffer);
                 data->index++;
                 break;
@@ -236,7 +243,7 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                 writeLabelIndex(data, data->index + 1);
                 writeLabelIndex(data, computeAddress(data->index, address));
                 strcat(result, buffer);
-                sprintf(buffer, "  #<BB%d>", searchLabelIndex(data, computeAddress(data->index, address)));
+                sprintf(buffer, "  #<BB-0x%x>", computeAddress(data->index, address));
                 strcat(result, buffer);
                 data->index += sizeof(uint32_t);
                 break;
@@ -270,7 +277,6 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
 
 void clearInstructionData(instructionData* data) {
     data->isEscaped = false;
-    data->opcode = 0;
     data->rex.lowerNibble = 0; //setting rex to invalid prefix
 }
 
@@ -305,14 +311,16 @@ bool decodeSingleInstruction(int length, uint8_t* instruction, instructionData* 
 
 
 void decodeAll(int length, uint8_t* instruction) {
-    instructionData data = {0, { 0 }, false, 0, NULL, instruction, { 0 }};
-    memset(data.basicBlocks, 0xff, 2048 * 4);
-    data.basicBlocks[0] = 0x0;
+    instructionData data = {0, { 0 }, false, 0, NULL, instruction, { {0, 0, 0, 0} }, 0};
+    memset(data.basicBlocks, 0xff, 2048 * sizeof(transition));
+    data.basicBlocks[0].to = 0x0;
     char strInstr[20];
     while ( data.index < length ) {
         int labelIndex = searchLabelIndex(&data, data.index);
         if ( labelIndex != -1 ) {
-            printf("BB%d:\n", labelIndex);
+            printf("BB-0x%x:\n", data.index);
+            data.currentBB++;
+            assignFromBB(&data, data.index, data.currentBB);
         }
         if ( !decodeSingleInstruction(length, instruction, &data, strInstr) ) {
             return;

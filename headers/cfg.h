@@ -10,8 +10,6 @@
 #include "decoder.h"
 
 
-
-
 void makeGraph(int length, uint8_t* instructions);
 
 #endif
