@@ -57,8 +57,6 @@ typedef struct {
 typedef struct {
     uint32_t from;
     uint32_t to;
-    int fromBB;
-    int toBB;
 } transition;
 
 enum GPR_64bit {
@@ -123,8 +121,7 @@ typedef struct instructionData {
     int index; /**< index in decoded instruction */
     params* expectedParams; /**< array which helps us interpret following bytes */
     uint8_t* instruction; /**< array of bytes forming the decoded instruction */
-    transition basicBlocks[2048];
-    int currentBB;
+    transition transitions[2048];
 } instructionData;
 
 
@@ -163,7 +160,7 @@ void decodeAll(int length, uint8_t* instruction);
 
 char* findRegisters(instructionData* data, char* string);
 
-bool decodeSingleInstruction(int length, uint8_t* instruction, instructionData* data, char* strInstr);
+bool decodeSingleInstruction(int length, instructionData* data, char* strInstr);
 
 //finds opcode in primary opcode table
 bool findOpcode(instructionData* data, char* string);

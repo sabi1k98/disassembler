@@ -1,13 +1,6 @@
 #include "cfg.h"
 
 
-bool isNonJumpInstr(uint8_t opcode) {
-    return opcode != JMP_REL8OFF && opcode != JMP_REL32OFF
-        && opcode != JE_REL8OFF && opcode != JE_REL32OFF
-        && opcode != JNE_REL8OFF && opcode != JNE_REL32OFF
-        && opcode != JB_REL8OFF && opcode != JB_REL32OFF;        
-}
-
 void openBasicBlock(int bbNum, bool enclosure) {
     if ( enclosure ) {
         printf("\\l\" ]\n");
@@ -22,42 +15,42 @@ void makeTransition(uint32_t from, uint32_t to) {
 
 uint32_t findBB(instructionData* data, uint32_t addr) {
     uint32_t max = 0;
-    for ( uint32_t i = 0; data->basicBlocks[i].to < 0xffffff; i++ ) {
-        if ( data->basicBlocks[i].to > max && data->basicBlocks[i].to < addr ) {
-            max = data->basicBlocks[i].to;
+    for ( uint32_t i = 0; data->transitions[i].to < 0xffffff; i++ ) {
+        if ( data->transitions[i].to > max && data->transitions[i].to < addr ) {
+            max = data->transitions[i].to;
         }
     }
     return max;
 }
 
 void addrToBB(instructionData* data) {
-    for ( uint32_t i = 0; data->basicBlocks[i].to < 0xffffff; i++ ) {
-        if ( data->basicBlocks[i].from == 0xffffffff ) {
+    for ( uint32_t i = 0; data->transitions[i].to < 0xffffff; i++ ) {
+        if ( data->transitions[i].from == 0xffffffff ) {
             continue;
         }
         //printf("%d %d\n", data->basicBlocks[i].from, data->basicBlocks[i].to);
-        data->basicBlocks[i].from = findBB(data, data->basicBlocks[i].from); 
+        data->transitions[i].from = findBB(data, data->transitions[i].from); 
     }
 }
 
 void makeTransitions(instructionData* data) {
-    for ( uint32_t i = 0; data->basicBlocks[i].to < 0xffffff; i++ ) {
-        if ( data->basicBlocks[i].from == 0xffffffff ) {
+    for ( uint32_t i = 0; data->transitions[i].to < 0xffffff; i++ ) {
+        if ( data->transitions[i].from == 0xffffffff ) {
            continue; 
         }
-        makeTransition(data->basicBlocks[i].from, data->basicBlocks[i].to);
+        makeTransition(data->transitions[i].from, data->transitions[i].to);
     }
 }
 
 void makeGraph(int length, uint8_t* instruction) {
     printf("digraph G {\n");
-    instructionData data = {0, { 0 }, false, 0, NULL, instruction, { {0, 0, 0, 0} }, -1};
-    memset(data.basicBlocks, 0xff, 2048 * sizeof(transition));
-    data.basicBlocks[0].to = 0x0;
+    instructionData data = {0, { 0 }, false, 0, NULL, instruction, { {0, 0} }};
+    memset(data.transitions, 0xff, 2048 * sizeof(transition));
+    data.transitions[0].to = 0x0;
     char strInstr[2048][20] = { { 0 } };
     int prev = 0;
     while ( data.index < length ) {
-        if ( !decodeSingleInstruction(length, instruction, &data, strInstr[data.index]) ) {
+        if ( !decodeSingleInstruction(length, &data, strInstr[data.index]) ) {
             return;
         }
         clearInstructionData(&data);
@@ -70,9 +63,9 @@ void makeGraph(int length, uint8_t* instruction) {
         int labelIndex = searchLabelIndex(&data, i);
         if ( labelIndex != -1 ) { 
             if ( strInstr[prev][0] != 'j' ) {
-                if ( i && data.basicBlocks[labelIndex].to <= (uint32_t)length ) {
+                if ( i && data.transitions[labelIndex].to <= (uint32_t)length ) {
                     data.index = findBB(&data, prev);
-                    writeLabelIndex(&data, data.basicBlocks[labelIndex].to);
+                    writeLabelIndex(&data, data.transitions[labelIndex].to);
                 }
                 //addrToBB(&data);
             }
@@ -87,9 +80,4 @@ void makeGraph(int length, uint8_t* instruction) {
     printf("\\l\" ]\n");
     makeTransitions(&data);
     putchar('}');
-    /*
-    for ( uint32_t i = 0; data.basicBlocks[i].to < 0xffffff; i++ ) {
-        printf("%d %d\n", data.basicBlocks[i].from, data.basicBlocks[i].to);
-    }
-    */
 }

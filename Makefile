@@ -6,16 +6,17 @@ ODIR=src/obj
 #.c files dir
 CDIR=src
 
-_DEPS = decoder.h cfg.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = decoder.o main.o cfg.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 .PHONY: clean
 .PHONY: all
 
-all: decode cfg
+all: decode cfg tests
+
+tests: $(ODIR)/tests.o $(ODIR)/decoder.o $(ODIR)/cfg.o
+	$(CC) -o $@ $^ $(CFLAGS)
 
 $(ODIR)/maind.o: $(CDIR)/main.c $(DEPS)
 	mkdir -p $(ODIR)
@@ -39,3 +40,5 @@ cfg: $(ODIR)/decoder.o $(ODIR)/cfg.o $(ODIR)/maincfg.o
 clean:
 	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~
 	rm decode
+	rm tests
+	rm cfg

@@ -126,9 +126,9 @@ bool findOpcode(instructionData* data, char* string) {
 	[0x50] = "push", [0x51] = "push", [0x52] = "push",
     [0x53] = "push", [0x54] = "push", [0x55] = "push",
 	[0x56] = "push", [0x57] = "push",
-	[0x58] = "pop", [0x59] = "pop", [0x60] = "pop",
-	[0x61] = "pop", [0x62] = "pop", [0x63] = "pop",
-	[0x64] = "pop", [0x65] = "pop",
+	[0x58] = "pop", [0x59] = "pop", [0x5a] = "pop",
+	[0x5b] = "pop", [0x5c] = "pop", [0x5d] = "pop",
+	[0x5e] = "pop", [0x5f] = "pop",
 	[0x68] = "push",
 	[0x72] = "jb",
 	[0x74] = "je",
@@ -145,6 +145,9 @@ bool findOpcode(instructionData* data, char* string) {
         return false;
     }
     strcat(string, primaryTable[data->opcode]);
+    if ( data->opcode == RET || data->opcode == NOP || data->opcode == INT3) {
+        return true;
+    }
     strcat(string, "\t");
     if ( data->opcode == XOR_REG_IMM32 || data->opcode == CMP_REG_IMM32
             || data->opcode == ADD_REG_IMM32 ) {
@@ -188,18 +191,9 @@ void getExpectedParams(instructionData* data) {
 
 }
 
-
-void assignFromBB(instructionData* data, uint32_t toAddr, int bb) {
-    for ( int i = 0; data->basicBlocks[i].to < 0xffffff; i++ ) {
-        if ( toAddr == data->basicBlocks[i].to ) {
-            data->basicBlocks[i].toBB = bb;
-        }
-    }
-}
-
 int searchLabelIndex(instructionData* data, uint32_t jumpTo) {
     for ( int i = 0; i < 2048; i++ ) {
-        if ( data->basicBlocks[i].to == jumpTo ) {
+        if ( data->transitions[i].to == jumpTo ) {
             return i;
         }
     }
@@ -208,9 +202,9 @@ int searchLabelIndex(instructionData* data, uint32_t jumpTo) {
 
 void writeLabelIndex(instructionData* data, uint32_t jumpTo) {
     for ( int i = 0; i < 2048; i++ ) {
-        if ( data->basicBlocks[i].to == 0xffffffff ) {
-            data->basicBlocks[i].from = jumpTo < 0xffffff ? (uint32_t)data->index : 0xffffffff;
-            data->basicBlocks[i].to = jumpTo < 0xffffff ? jumpTo : (uint32_t)data->index;
+        if ( data->transitions[i].to == 0xffffffff ) {
+            data->transitions[i].from = jumpTo < 0xffffff ? (uint32_t)data->index : 0xffffffff;
+            data->transitions[i].to = jumpTo < 0xffffff ? jumpTo : (uint32_t)data->index;
             return;
         }
     }
@@ -220,14 +214,14 @@ void writeLabelIndex(instructionData* data, uint32_t jumpTo) {
 bool decodeInstruction(instructionData* data, int length, char result[20]) {
     char buffer[20] = { 0 };
     if ( !findOpcode(data, result) ) {
-        fprintf(stderr, "Unknown instruction\n");
+        fprintf(stderr, "Unknown opcode\n");
         return false;
     }
     int i = 0;
     int address;
     while( data->expectedParams[i] != NONE ) {
         if ( i == length ) {
-            printf("Unknown instruction\n");
+            printf("Unexpected end of input\n");
             return false;
         }
         switch ( data->expectedParams[i] ) {
@@ -246,7 +240,7 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                 break;
             case DISPLACEMENT_32:
                 if ( data->index + 3 > length ) {
-                    printf("Unknown instruction\n");
+                    printf("Invalid operand size\n");
                     return false; 
                 }
                 sprintf(buffer, "%x", computeAddress(data->index, (address = get32BitValue(data))));
@@ -263,7 +257,7 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                 break;
             case IMM64:
                 if ( data->index + 3 > length ) {
-                    printf("Unknown instruction\n");
+                    printf("Invalid operand size\n");
                     return false;
                 }
                 sprintf(buffer, "$0x%x", get32BitValue(data));
@@ -272,7 +266,9 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
             case RQ:
                 if ( findGPR(data, buffer) ) {
                     strcat(result, buffer);
+                    return true;
                 }
+                return false;
                 break;
             case MODrm:
                 if ( !findRegisters(data, result) ) {
@@ -304,14 +300,13 @@ void decodeREX(instructionData* data, uint8_t* instruction) {
 }
 
 
-bool decodeSingleInstruction(int length, uint8_t* instruction, instructionData* data, char* strInstr) {
-    memset(strInstr, '\0', 20); 
-    decodeREX(data, instruction);
-    if ( isEscaped(instruction[data->index]) ) {
+bool decodeSingleInstruction(int length, instructionData* data, char* strInstr) {
+    decodeREX(data, data->instruction);
+    if ( isEscaped(data->instruction[data->index]) ) {
         data->isEscaped = true;
         data->index++;
     }
-    data->opcode = instruction[data->index];
+    data->opcode = data->instruction[data->index];
     data->index++;
     params expectedParams[4] = { NONE };
     data->expectedParams = expectedParams;
@@ -321,12 +316,12 @@ bool decodeSingleInstruction(int length, uint8_t* instruction, instructionData* 
 
 
 void decodeAll(int length, uint8_t* instruction) {
-    instructionData data = {0, { 0 }, false, 0, NULL, instruction, { {0, 0, 0, 0} }, 0};
-    memset(data.basicBlocks, 0xff, 2048 * sizeof(transition));
-    data.basicBlocks[0].to = 0x0;
+    instructionData data = {0, { 0 }, false, 0, NULL, instruction, { {0, 0} }};
+    memset(data.transitions, 0xff, 2048 * sizeof(transition));
+    data.transitions[0].to = 0x0;
     char strInstr[2048][30] = { { 0 } };
     while ( data.index < length ) {
-        if ( !decodeSingleInstruction(length, instruction, &data, strInstr[data.index]) ) {
+        if ( !decodeSingleInstruction(length, &data, strInstr[data.index]) ) {
             return;
         }
         clearInstructionData(&data);
