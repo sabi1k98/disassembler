@@ -209,9 +209,8 @@ int searchLabelIndex(instructionData* data, uint32_t jumpTo) {
 void writeLabelIndex(instructionData* data, uint32_t jumpTo) {
     for ( int i = 0; i < 2048; i++ ) {
         if ( data->basicBlocks[i].to == 0xffffffff ) {
-            data->basicBlocks[i].from = data->index;
-            data->basicBlocks[i].to = jumpTo;
-            data->basicBlocks[i].fromBB = jumpTo > (uint32_t)data->index ? data->currentBB : data->currentBB + 1;
+            data->basicBlocks[i].from = jumpTo < 0xffffff ? (uint32_t)data->index : 0xffffffff;
+            data->basicBlocks[i].to = jumpTo < 0xffffff ? jumpTo : (uint32_t)data->index;
             return;
         }
     }
@@ -237,6 +236,8 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                 if ( data->opcode != JMP_REL8OFF && data->opcode != JMP_REL32OFF && 
                         (length > data->index || address <= 0) ) {
                     writeLabelIndex(data, data->index);
+                } else {
+                    writeLabelIndex(data, 0xffffffff);
                 }
                 writeLabelIndex(data, computeAddress(data->index, address));
                 strcat(result, buffer);
@@ -252,6 +253,8 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                 if ( data->opcode != JMP_REL8OFF && data->opcode != JMP_REL32OFF && 
                         (length > data->index || address <= 0) ) {
                     writeLabelIndex(data, data->index);
+                } else {
+                    writeLabelIndex(data, 0xffffffff);
                 }
                 writeLabelIndex(data, computeAddress(data->index, address));
                 strcat(result, buffer);
@@ -323,11 +326,6 @@ void decodeAll(int length, uint8_t* instruction) {
     data.basicBlocks[0].to = 0x0;
     char strInstr[2048][30] = { { 0 } };
     while ( data.index < length ) {
-        int labelIndex = searchLabelIndex(&data, data.index);
-        if ( labelIndex != -1 ) {
-            data.currentBB++;
-            assignFromBB(&data, data.index, data.currentBB);
-        }
         if ( !decodeSingleInstruction(length, instruction, &data, strInstr[data.index]) ) {
             return;
         }
