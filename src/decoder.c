@@ -112,6 +112,7 @@ char* findRegisters(instructionData* data, char* string) {
         regValue2String(firstReg, string);
         strcat(string, ", ");
     }
+    data->index++;
     return regValue2String(secondReg, string);
 }
 
@@ -151,11 +152,6 @@ bool findOpcode(instructionData* data, char* string) {
     strcat(string, "\t");
     if ( data->opcode == XOR_REG_IMM32 || data->opcode == CMP_REG_IMM32
             || data->opcode == ADD_REG_IMM32 ) {
-        if ( data->rex.w ) {
-            strcat(string, "%rax,"); 
-        } else {
-            strcat(string, "%eax,"); 
-        }
     }
     return true;
 }
@@ -260,8 +256,13 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                     printf("Invalid operand size\n");
                     return false;
                 }
-                sprintf(buffer, "$0x%x", get32BitValue(data));
+                sprintf(buffer, "$0x%x,", get32BitValue(data));
                 strcat(result, buffer);
+                if ( data->rex.w ) {
+                    strcat(result, "%rax"); 
+                } else {
+                    strcat(result, "%eax"); 
+                }
                 break;
             case RQ:
                 if ( findGPR(data, buffer) ) {
@@ -272,9 +273,10 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                 break;
             case MODrm:
                 if ( !findRegisters(data, result) ) {
-                    printf("Unknown instruction\n");
+                    printf("Unknown modRM byte\n");
                     return false;
                 }
+                return true;
                 break;
         }
         i++;
