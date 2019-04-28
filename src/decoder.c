@@ -86,11 +86,11 @@ char* decodeMoveInstruction(instructionData* data, ModRM modrm, char* string) {
     }
     if ( data->opcode == MOV_REG_MEM ) {
         strcat(string, source);
-        strcat(string, ", ");
+        strcat(string, ",");
         strcat(string, regValue2String(regNum, destination));
     } else {
         strcat(string, regValue2String(regNum, destination));
-        strcat(string, ", ");
+        strcat(string, ",");
         strcat(string, source);
     }
     return string;
@@ -110,7 +110,7 @@ char* findRegisters(instructionData* data, char* string) {
     int secondReg = modrm.rm | (data->rex.b << 3); 
     if ( data->opcode != MUL ) {
         regValue2String(firstReg, string);
-        strcat(string, ", ");
+        strcat(string, ",");
     }
     data->index++;
     return regValue2String(secondReg, string);
@@ -231,7 +231,7 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                 }
                 writeLabelIndex(data, computeAddress(data->index, address));
                 strcat(result, buffer);
-                sprintf(buffer, "  #<BB-0x%x>", computeAddress(data->index, address));
+                sprintf(buffer, " #<BB-0x%x>", computeAddress(data->index, address));
                 strcat(result, buffer);
                 break;
             case DISPLACEMENT_32:
@@ -248,7 +248,7 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                 }
                 writeLabelIndex(data, computeAddress(data->index, address));
                 strcat(result, buffer);
-                sprintf(buffer, "  #<BB-0x%x>", computeAddress(data->index, address));
+                sprintf(buffer, " #<BB-0x%x>", computeAddress(data->index, address));
                 strcat(result, buffer);
                 break;
             case IMM64:
