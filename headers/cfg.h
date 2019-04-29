@@ -10,6 +10,16 @@
 #include "decoder.h"
 
 
-void makeGraph(int length, uint8_t* instructions);
+uint32_t findBB(instructionData* data, uint32_t addr);
+
+void addrToBB(instructionData* data);
+
+void openBasicBlock(int bbNum, bool enclosure);
+
+void makeTransitions(instructionData* data);
+
+void makeTransition(uint32_t from, uint32_t to);
+
+void makeGraph(int length, const uint8_t* instructions);
 
 #endif

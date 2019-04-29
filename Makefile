@@ -16,7 +16,11 @@ OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 all: decode cfg tests
 
-tests: test_hw1
+tests: test_hw1 test_hw2
+
+
+test_hw2: $(ODIR)/test_hw2.o $(ODIR)/decoder.o $(ODIR)/cfg.o
+	$(CC) -o $@ $^ $(CFLAGS)
 
 test_hw1: $(ODIR)/test_hw1.o $(ODIR)/decoder.o $(ODIR)/cfg.o
 	$(CC) -o $@ $^ $(CFLAGS)

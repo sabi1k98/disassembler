@@ -120,7 +120,7 @@ typedef struct instructionData {
     bool isEscaped; /**< sets to true if escape byte is found */
     int index; /**< index in decoded instruction */
     params* expectedParams; /**< array which helps us interpret following bytes */
-    uint8_t* instruction; /**< array of bytes forming the decoded instruction */
+    const uint8_t* instruction; /**< array of bytes forming the decoded instruction */
     transition transitions[2048];
 } instructionData;
 
@@ -155,7 +155,7 @@ char* findGPR(instructionData* data, char* string);
 char* decodeMoveInstruction(instructionData* data, ModRM modrm, char* string);
 
 
-void decodeAll(int length, uint8_t* instruction);
+void decodeAll(int length, const uint8_t* instruction);
 
 
 char* findRegisters(instructionData* data, char* string);

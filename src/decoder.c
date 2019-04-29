@@ -290,7 +290,7 @@ void clearInstructionData(instructionData* data) {
     data->rex.lowerNibble = 0; //setting rex to invalid prefix
 }
 
-void decodeREX(instructionData* data, uint8_t* instruction) {
+void decodeREX(instructionData* data, const uint8_t* instruction) {
     if ( isREXprefix(instruction[data->index]) ) {
         data->rex.lowerNibble = instruction[data->index] >> 4;
         data->rex.w = instruction[data->index] >> 3;
@@ -317,7 +317,7 @@ bool decodeSingleInstruction(int length, instructionData* data, char* strInstr) 
 }
 
 
-void decodeAll(int length, uint8_t* instruction) {
+void decodeAll(int length, const uint8_t* instruction) {
     instructionData data = {0, { 0 }, false, 0, NULL, instruction, { {0, 0} }};
     memset(data.transitions, 0xff, 2048 * sizeof(transition));
     data.transitions[0].to = 0x0;

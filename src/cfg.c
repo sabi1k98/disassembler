@@ -3,7 +3,7 @@
 
 void openBasicBlock(int bbNum, bool enclosure) {
     if ( enclosure ) {
-        printf("\\l\" ]\n");
+        printf("\" ]\n");
     }
     printf("%d [ shape=rectangle label=\"", bbNum); 
 }
@@ -28,7 +28,6 @@ void addrToBB(instructionData* data) {
         if ( data->transitions[i].from == 0xffffffff ) {
             continue;
         }
-        //printf("%d %d\n", data->basicBlocks[i].from, data->basicBlocks[i].to);
         data->transitions[i].from = findBB(data, data->transitions[i].from); 
     }
 }
@@ -42,7 +41,7 @@ void makeTransitions(instructionData* data) {
     }
 }
 
-void makeGraph(int length, uint8_t* instruction) {
+void makeGraph(int length, const uint8_t* instruction) {
     printf("digraph G {\n");
     instructionData data = {0, { 0 }, false, 0, NULL, instruction, { {0, 0} }};
     memset(data.transitions, 0xff, 2048 * sizeof(transition));
@@ -77,7 +76,7 @@ void makeGraph(int length, uint8_t* instruction) {
         prev = i;
     }
 
-    printf("\\l\" ]\n");
+    printf("\" ]\n");
     makeTransitions(&data);
     putchar('}');
 }
