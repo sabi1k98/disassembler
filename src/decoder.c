@@ -210,7 +210,7 @@ void writeLabelIndex(instructionData* data, uint32_t jumpTo) {
 bool decodeInstruction(instructionData* data, int length, char result[20]) {
     char buffer[20] = { 0 };
     if ( !findOpcode(data, result) ) {
-        fprintf(stderr, "Unknown opcode\n");
+        fprintf(stderr, "Unknown opcode: %x\n", data->opcode);
         return false;
     }
     int i = 0;

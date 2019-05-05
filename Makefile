@@ -11,10 +11,9 @@ DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-.PHONY: clean
-.PHONY: all
+.PHONY: all tests clean
 
-all: decode cfg tests
+all: decode cfg tests cfg.elf decode.elf
 
 tests: test_hw1 test_hw2
 
@@ -33,6 +32,13 @@ $(ODIR)/maincfg.o: $(CDIR)/main.c $(DEPS)
 	mkdir -p $(ODIR)
 	$(CC) $(CFLAGS) -c $< -o $@ -D CFG
 
+$(ODIR)/maincfgelf.o: $(CDIR)/main.c $(DEPS)
+	mkdir -p $(ODIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -D CFG -D ELF
+
+$(ODIR)/maindelf.o: $(CDIR)/main.c $(DEPS)
+	mkdir -p $(ODIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -D DECODE -D ELF
 
 $(ODIR)/test%.o: $(TESTDIR)/test%.c $(DEPS)
 	mkdir -p $(ODIR)
@@ -42,17 +48,21 @@ $(ODIR)/%.o: $(CDIR)/%.c $(DEPS)
 	mkdir -p $(ODIR)
 	$(CC) $(CFLAGS) -c $< -o $@ 
 
-
-
 decode: $(ODIR)/decoder.o $(ODIR)/maind.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
 cfg: $(ODIR)/decoder.o $(ODIR)/cfg.o $(ODIR)/maincfg.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
+decode.elf: $(ODIR)/decoder.o $(ODIR)/elfutils.o $(ODIR)/maindelf.o
+	$(CC) -o $@ $^ $(CFLAGS)
+
+cfg.elf: $(ODIR)/decoder.o $(ODIR)/cfg.o $(ODIR)/elfutils.o $(ODIR)/maincfgelf.o
+	$(CC) -o $@ $^ $(CFLAGS)
 
 clean:
 	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~
 	rm decode
-	rm tests
+	rm test_hw1
+	rm test_hw2
 	rm cfg
