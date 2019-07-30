@@ -196,11 +196,12 @@ int searchLabelIndex(instructionData* data, uint32_t jumpTo) {
     return -1;
 }
 
-void writeLabelIndex(instructionData* data, uint32_t jumpTo) {
+void writeLabelIndex(instructionData* data, uint32_t jumpTo, bool fallthrough) {
     for ( int i = 0; i < 2048; i++ ) {
         if ( data->transitions[i].to == 0xffffffff ) {
             data->transitions[i].from = jumpTo < 0xffffff ? (uint32_t)data->index : 0xffffffff;
             data->transitions[i].to = jumpTo < 0xffffff ? jumpTo : (uint32_t)data->index;
+            data->transitions[i].fallthrough = fallthrough;
             return;
         }
     }
@@ -211,7 +212,7 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
     char buffer[20] = { 0 };
     if ( !findOpcode(data, result) ) {
         fprintf(stderr, "Unknown opcode: %x\n", data->opcode);
-        return false;
+        return true;
     }
     int i = 0;
     int address;
@@ -225,11 +226,11 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                 sprintf(buffer, "%x", computeAddress(data->index, (address = get8BitValue(data))));
                 if ( data->opcode != JMP_REL8OFF && data->opcode != JMP_REL32OFF && 
                         (length > data->index || address <= 0) ) {
-                    writeLabelIndex(data, data->index);
+                    writeLabelIndex(data, data->index, true);
                 } else {
-                    writeLabelIndex(data, 0xffffffff);
+                    writeLabelIndex(data, 0xffffffff, false);
                 }
-                writeLabelIndex(data, computeAddress(data->index, address));
+                writeLabelIndex(data, computeAddress(data->index, address), false);
                 strcat(result, buffer);
                 sprintf(buffer, " #<BB-0x%x>", computeAddress(data->index, address));
                 strcat(result, buffer);
@@ -242,11 +243,11 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                 sprintf(buffer, "%x", computeAddress(data->index, (address = get32BitValue(data))));
                 if ( data->opcode != JMP_REL8OFF && data->opcode != JMP_REL32OFF && 
                         (length > data->index || address <= 0) ) {
-                    writeLabelIndex(data, data->index);
+                    writeLabelIndex(data, data->index, true);
                 } else {
-                    writeLabelIndex(data, 0xffffffff);
+                    writeLabelIndex(data, 0xffffffff, false);
                 }
-                writeLabelIndex(data, computeAddress(data->index, address));
+                writeLabelIndex(data, computeAddress(data->index, address), false);
                 strcat(result, buffer);
                 sprintf(buffer, " #<BB-0x%x>", computeAddress(data->index, address));
                 strcat(result, buffer);
@@ -318,7 +319,7 @@ bool decodeSingleInstruction(int length, instructionData* data, char* strInstr) 
 
 
 void decodeAll(int length, const uint8_t* instruction) {
-    instructionData data = {0, { 0 }, false, 0, NULL, instruction, { {0, 0} }};
+    instructionData data = {0, { 0 }, false, 0, NULL, instruction, { {0, 0, false} }};
     memset(data.transitions, 0xff, 2048 * sizeof(transition));
     data.transitions[0].to = 0x0;
     char strInstr[2048][30] = { { 0 } };

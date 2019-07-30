@@ -8,8 +8,12 @@ void openBasicBlock(int bbNum, bool enclosure) {
     printf("%d [ shape=rectangle label=\"", bbNum); 
 }
 
-void makeTransition(uint32_t from, uint32_t to) {
-    printf("%d -> %d\n", from, to);
+void makeTransition(uint32_t from, uint32_t to, bool fallthrought) {
+    printf("%d -> %d", from, to);
+    if ( fallthrought ) {
+        printf(" [ label=\"fallthrough\" ]");
+    }
+    putchar('\n');
 }
 
 
@@ -37,13 +41,13 @@ void makeTransitions(instructionData* data) {
         if ( data->transitions[i].from == 0xffffffff ) {
            continue; 
         }
-        makeTransition(data->transitions[i].from, data->transitions[i].to);
+        makeTransition(data->transitions[i].from, data->transitions[i].to, data->transitions[i].fallthrough);
     }
 }
 
 void makeGraph(int length, const uint8_t* instruction) {
     printf("digraph G {\n");
-    instructionData data = {0, { 0 }, false, 0, NULL, instruction, { {0, 0} }};
+    instructionData data = {0, { 0 }, false, 0, NULL, instruction, { {0, 0, false} }};
     memset(data.transitions, 0xff, 2048 * sizeof(transition));
     data.transitions[0].to = 0x0;
     char strInstr[2048][20] = { { 0 } };
@@ -64,7 +68,7 @@ void makeGraph(int length, const uint8_t* instruction) {
             if ( strInstr[prev][0] != 'j' ) {
                 if ( i && data.transitions[labelIndex].to <= (uint32_t)length ) {
                     data.index = findBB(&data, prev);
-                    writeLabelIndex(&data, data.transitions[labelIndex].to);
+                    writeLabelIndex(&data, data.transitions[labelIndex].to, true);
                 }
                 //addrToBB(&data);
             }

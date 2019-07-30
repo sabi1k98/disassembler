@@ -18,7 +18,7 @@ void openBasicBlock(int bbNum, bool enclosure);
 
 void makeTransitions(instructionData* data);
 
-void makeTransition(uint32_t from, uint32_t to);
+void makeTransition(uint32_t from, uint32_t to, bool fallthrough);
 
 void makeGraph(int length, const uint8_t* instructions);
 

@@ -57,6 +57,7 @@ typedef struct {
 typedef struct {
     uint32_t from;
     uint32_t to;
+    bool fallthrough;
 } transition;
 
 enum GPR_64bit {
@@ -182,5 +183,5 @@ uint32_t computeAddress(uint32_t current, uint32_t relative);
 
 void assignFromBB(instructionData* data, uint32_t toAddr, int bb);
 
-void writeLabelIndex(instructionData* data, uint32_t jumpTo);
+void writeLabelIndex(instructionData* data, uint32_t jumpTo, bool fallthrough);
 #endif
