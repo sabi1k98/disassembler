@@ -23,7 +23,7 @@ void put_offset32(uint8_t* instruction, uint32_t offset) {
 
 
 TEST(1B_INSTRUCTIONS) {
-    instructionData data = {0, { 0 }, false, 0, NULL, NULL,  { {0, 0} }};
+    instructionData data = {0, { 0 }, false, 0, NULL, NULL,  { {0, 0, false} }};
     char resultBuffer[30] = { 0 };
     uint8_t instruction[2] = { 0 };
     data.instruction = instruction;
@@ -112,7 +112,7 @@ TEST(1B_INSTRUCTIONS) {
 
 
 TEST(ARITHMETIC_AND_BITWISE_INSTRUCTIONS) {
-    instructionData data = {0, { 0 }, false, 0, NULL, NULL,  { {0, 0} }};
+    instructionData data = {0, { 0 }, false, 0, NULL, NULL,  { {0, 0, false} }};
     char resultBuffer[30] = { 0 };
     uint8_t instruction[6] = { 0 };
     data.instruction = instruction;
@@ -219,7 +219,7 @@ TEST(ARITHMETIC_AND_BITWISE_INSTRUCTIONS) {
 
 
 TEST(MOVE_INSTRUCTION) {
-    instructionData data = {0, { 0 }, false, 0, NULL, NULL,  { {0, 0} }};
+    instructionData data = {0, { 0 }, false, 0, NULL, NULL,  { {0, 0, false} }};
     char resultBuffer[30] = { 0 };
     uint8_t instruction[7] = { 0 };
     data.instruction = instruction;
@@ -281,7 +281,7 @@ TEST(MOVE_INSTRUCTION) {
 }
 
 TEST(JUMPS) {
-    instructionData data = {0, { 0 }, false, 0, NULL, NULL,  { {0, 0} }};
+    instructionData data = {0, { 0 }, false, 0, NULL, NULL,  { {0, 0, false} }};
     char resultBuffer[30] = { 0 };
     uint8_t instruction[6] = { 0 };
     data.instruction = instruction;

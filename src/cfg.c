@@ -53,8 +53,14 @@ void makeGraph(int length, const uint8_t* instruction) {
     char strInstr[2048][20] = { { 0 } };
     int prev = 0;
     while ( data.index < length ) {
+        int fallbackIndex = data.index;
         if ( !decodeSingleInstruction(length, &data, strInstr[data.index]) ) {
             return;
+        } 
+        if ( !strncmp(strInstr[fallbackIndex], "Unknown", 7) ) {
+            for ( int i = fallbackIndex; i < data.index; i++ ) {
+                sprintf(strInstr[i], "Unknown: 0x%x", data.instruction[i]);
+            }
         }
         clearInstructionData(&data);
     }

@@ -31,6 +31,12 @@ const uint8_t LOOP[] = { 0x48, 0x05, 0x42, 0x42, 0x42,
                          0xff, 0xff };
 
 
+const uint8_t LOOP_BROKEN[] = { 0x48, 0x05, 0x42, 0x42, 0x42,
+                         0x42, 0x90, 0xed, 0xff, 0x90,
+                         0x90, 0x90, 0xe9, 0xf5, 0xff,
+                         0xff };
+
+
 
 TEST(MULTIPLE_INSTRUCTIONS_WITH_CONTROL_FLOW) {
     SUBTEST(NOPS) {
@@ -78,6 +84,23 @@ TEST(MULTIPLE_INSTRUCTIONS_WITH_CONTROL_FLOW) {
         CHECK_FILE(stdout, expected);
         CHECK_FILE(stderr, "");
     }
+    SUBTEST(BROKEN_BIG_LOOP_WITH_UNKNOWN_INSTRUCTIONS) {
+        const char* expected = "BB-0x0:\n"
+                                "0:\tadd\t$0x42424242,%rax\n"
+                                "6:\tnop\n"
+                                "7:\tUnknown: 0xed\n"
+                                "8:\tUnknown: 0xff\n"
+                                "9:\tnop\n"
+                                "a:\tnop\n"
+                                "b:\tnop\n"
+                                "c:\tUnknown: 0xe9\n"
+                                "d:\tUnknown: 0xf5\n"
+                                "e:\tUnknown: 0xff\n"
+                                "f:\tUnknown: 0xff\n";
+        decodeAll(16, LOOP_BROKEN);
+        CHECK_FILE(stdout, expected);
+        CHECK_FILE(stderr, "");
+    }
 }
 
 
@@ -89,11 +112,11 @@ TEST(CFG_CREATION) {
                 "3 [ shape=rectangle label=\"BB-0x3:\\l3:\tnop\\l4:\tnop\\l5:\tnop\\l\" ]\n"
                 "6 [ shape=rectangle label=\"BB-0x6:\\l6:\tnop\\l7:\tje\t0 #<BB-0x0>\\l\" ]\n"
                 "9 [ shape=rectangle label=\"BB-0x9:\\l9:\tnop\\l\" ]\n"
-                "0 -> 3\n"
+                "0 -> 3 [ label=\"fallthrough\" ]\n"
                 "0 -> 6\n"
-                "6 -> 9\n"
+                "6 -> 9 [ label=\"fallthrough\" ]\n"
                 "6 -> 0\n"
-                "3 -> 6\n"
+                "3 -> 6 [ label=\"fallthrough\" ]\n"
                 "}";
         makeGraph(10, NOPS);
         CHECK_FILE(stdout, expected);
@@ -119,10 +142,20 @@ TEST(CFG_CREATION) {
                                "0 [ shape=rectangle label=\"BB-0x0:\\l0:\tadd\t$0x42424242,%rax\\l\" ]\n"
                                "6 [ shape=rectangle label=\"BB-0x6:\\l6:\tnop\\l7:\tnop\\l8:\tnop\\l9:\tnop\\la:\tnop\\lb:\tnop\\lc:\tjmp\t6 #<BB-0x6>\\l\" ]\n"
                                "6 -> 6\n"
-                               "0 -> 6\n"
+                               "0 -> 6 [ label=\"fallthrough\" ]\n"
                                "}";
 
         makeGraph(17, LOOP);
+        CHECK_FILE(stdout, expected);
+        CHECK_FILE(stderr, "");
+    }
+    SUBTEST(BROKEN_BIG_LOOP_WITH_UNKNOWN_INSTRUCTIONS) {
+        const char* expected = "digraph G {\n"
+                               "0 [ shape=rectangle label=\"BB-0x0:\\l0:\tadd\t$0x42424242,%rax\\l6:\tnop\\l7:\tUnknown: 0xed\\l8:\t"
+                               "Unknown: 0xff\\l9:\tnop\\la:\tnop\\lb:\tnop\\lc:\tUnknown: 0xe9\\ld:\tUnknown: 0xf5\\le:\tUnknown: 0xff\\lf:\tUnknown: 0xff\\l\" ]\n"
+                               "}";
+
+        makeGraph(16, LOOP_BROKEN);
         CHECK_FILE(stdout, expected);
         CHECK_FILE(stderr, "");
     }

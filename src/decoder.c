@@ -238,7 +238,7 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
             case DISPLACEMENT_32:
                 if ( data->index + 3 >= length ) {
                     BAD_BYTE();
-                    data->index = length - 2;
+                    data->index = length - 1;
                     return true; 
                 }
                 sprintf(buffer, "%x", computeAddress(data->index, (address = get32BitValue(data))));
@@ -256,7 +256,7 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
             case IMM64:
                 if ( data->index + 3 >= length ) {
                     BAD_BYTE();
-                    data->index = length - 2;
+                    data->index = length - 1;
                     return true;
                 }
                 sprintf(buffer, "$0x%x,", get32BitValue(data));
