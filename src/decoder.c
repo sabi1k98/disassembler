@@ -207,11 +207,12 @@ void writeLabelIndex(instructionData* data, uint32_t jumpTo, bool fallthrough) {
     }
 }
 
+#define BAD_BYTE() sprintf(result, "Unknown: 0x%x", data->instruction[data->index])
 
 bool decodeInstruction(instructionData* data, int length, char result[20]) {
     char buffer[20] = { 0 };
     if ( !findOpcode(data, result) ) {
-        strcat(result, "Unknown");
+        BAD_BYTE();
         return true;
     }
     int i = 0;
@@ -235,8 +236,9 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                 strcat(result, buffer);
                 break;
             case DISPLACEMENT_32:
-                if ( data->index + 3 > length ) {
-                    strcat(result, "Unknown");
+                if ( data->index + 3 >= length ) {
+                    BAD_BYTE();
+                    data->index = length - 2;
                     return true; 
                 }
                 sprintf(buffer, "%x", computeAddress(data->index, (address = get32BitValue(data))));
@@ -252,8 +254,9 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                 strcat(result, buffer);
                 break;
             case IMM64:
-                if ( data->index + 3 > length ) {
-                    strcat(result, "Unknown");
+                if ( data->index + 3 >= length ) {
+                    BAD_BYTE();
+                    data->index = length - 2;
                     return true;
                 }
                 sprintf(buffer, "$0x%x,", get32BitValue(data));
@@ -272,7 +275,7 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                 break;
             case MODrm:
                 if ( !findRegisters(data, result) ) {
-                    strcat(result, "Unknown");
+                    BAD_BYTE();
                 }
                 return true;
                 break;
@@ -321,8 +324,14 @@ void decodeAll(int length, const uint8_t* instruction) {
     data.transitions[0].to = 0x0;
     char strInstr[2048][30] = { { 0 } };
     while ( data.index < length ) {
+        int fallbackIndex = data.index;
         if ( !decodeSingleInstruction(length, &data, strInstr[data.index]) ) {
             return;
+        }
+        if ( !strncmp(strInstr[fallbackIndex], "Unknown", 7) ) {
+            for ( int i = fallbackIndex; i < data.index; i++ ) {
+                sprintf(strInstr[i], "Unknown: 0x%x", data.instruction[i]);
+            }
         }
         clearInstructionData(&data);
     }
