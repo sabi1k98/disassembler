@@ -211,14 +211,13 @@ void writeLabelIndex(instructionData* data, uint32_t jumpTo, bool fallthrough) {
 bool decodeInstruction(instructionData* data, int length, char result[20]) {
     char buffer[20] = { 0 };
     if ( !findOpcode(data, result) ) {
-        fprintf(stderr, "Unknown opcode: %x\n", data->opcode);
+        strcat(result, "Unknown");
         return true;
     }
     int i = 0;
     int address;
     while( data->expectedParams[i] != NONE ) {
         if ( i == length ) {
-            printf("Unexpected end of input\n");
             return false;
         }
         switch ( data->expectedParams[i] ) {
@@ -237,8 +236,8 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                 break;
             case DISPLACEMENT_32:
                 if ( data->index + 3 > length ) {
-                    printf("Invalid operand size\n");
-                    return false; 
+                    strcat(result, "Unknown");
+                    return true; 
                 }
                 sprintf(buffer, "%x", computeAddress(data->index, (address = get32BitValue(data))));
                 if ( data->opcode != JMP_REL8OFF && data->opcode != JMP_REL32OFF && 
@@ -254,8 +253,8 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
                 break;
             case IMM64:
                 if ( data->index + 3 > length ) {
-                    printf("Invalid operand size\n");
-                    return false;
+                    strcat(result, "Unknown");
+                    return true;
                 }
                 sprintf(buffer, "$0x%x,", get32BitValue(data));
                 strcat(result, buffer);
@@ -268,14 +267,12 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
             case RQ:
                 if ( findGPR(data, buffer) ) {
                     strcat(result, buffer);
-                    return true;
                 }
-                return false;
+                return true;
                 break;
             case MODrm:
                 if ( !findRegisters(data, result) ) {
-                    printf("Unknown modRM byte\n");
-                    return false;
+                    strcat(result, "Unknown");
                 }
                 return true;
                 break;
