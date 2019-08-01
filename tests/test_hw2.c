@@ -52,7 +52,7 @@ TEST(MULTIPLE_INSTRUCTIONS_WITH_CONTROL_FLOW) {
                                "7:\tje\t0 #<BB-0x0>\n"
                                "BB-0x9:\n"
                                "9:\tnop\n";
-        decodeAll(10, NOPS);
+        decodeAll(10, NOPS, 0);
         CHECK_FILE(stdout, expected);
 
     }
@@ -66,7 +66,7 @@ TEST(MULTIPLE_INSTRUCTIONS_WITH_CONTROL_FLOW) {
                                 "10:\tjmp\t5 #<BB-0x5>\n"
                                 "BB-0x15:\n"
                                 "15:\tpush\t%rbp\n";
-        decodeAll(22, JUMP_CFLW);
+        decodeAll(22, JUMP_CFLW, 0);
         CHECK_FILE(stdout, expected);
     }
     SUBTEST(BIG_LOOP) {
@@ -80,7 +80,7 @@ TEST(MULTIPLE_INSTRUCTIONS_WITH_CONTROL_FLOW) {
                                 "a:\tnop\n"
                                 "b:\tnop\n"
                                 "c:\tjmp\t6 #<BB-0x6>\n";
-        decodeAll(17, LOOP);
+        decodeAll(17, LOOP, 0);
         CHECK_FILE(stdout, expected);
         CHECK_FILE(stderr, "");
     }
@@ -97,7 +97,7 @@ TEST(MULTIPLE_INSTRUCTIONS_WITH_CONTROL_FLOW) {
                                 "d:\tUnknown: 0xf5\n"
                                 "e:\tUnknown: 0xff\n"
                                 "f:\tUnknown: 0xff\n";
-        decodeAll(16, LOOP_BROKEN);
+        decodeAll(16, LOOP_BROKEN, 0);
         CHECK_FILE(stdout, expected);
         CHECK_FILE(stderr, "");
     }
@@ -118,7 +118,7 @@ TEST(CFG_CREATION) {
                 "6 -> 0\n"
                 "3 -> 6 [ label=\"fallthrough\" ]\n"
                 "}";
-        makeGraph(10, NOPS);
+        makeGraph(10, NOPS, 0);
         CHECK_FILE(stdout, expected);
         CHECK_FILE(stderr, "");
 
@@ -133,7 +133,7 @@ TEST(CFG_CREATION) {
                                 "5 -> 21\n"
                                 "16 -> 5\n"
                                 "}"; 
-        makeGraph(22, JUMP_CFLW);
+        makeGraph(22, JUMP_CFLW, 0);
         CHECK_FILE(stdout, expected);
         CHECK_FILE(stderr, "");
     }
@@ -145,7 +145,7 @@ TEST(CFG_CREATION) {
                                "0 -> 6 [ label=\"fallthrough\" ]\n"
                                "}";
 
-        makeGraph(17, LOOP);
+        makeGraph(17, LOOP, 0);
         CHECK_FILE(stdout, expected);
         CHECK_FILE(stderr, "");
     }
@@ -155,7 +155,7 @@ TEST(CFG_CREATION) {
                                "Unknown: 0xff\\l9:\tnop\\la:\tnop\\lb:\tnop\\lc:\tUnknown: 0xe9\\ld:\tUnknown: 0xf5\\le:\tUnknown: 0xff\\lf:\tUnknown: 0xff\\l\" ]\n"
                                "}";
 
-        makeGraph(16, LOOP_BROKEN);
+        makeGraph(16, LOOP_BROKEN, 0);
         CHECK_FILE(stdout, expected);
         CHECK_FILE(stderr, "");
     }

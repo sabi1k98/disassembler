@@ -31,9 +31,8 @@ int loadBinaryStdin(uint8_t* instruction) {
 
 
 int main(int argc, const char* argv[]) {
-    //according to the amd64 manual, the total instruction length
-    //can not be longer than 15 bytes
     uint8_t* instruction;
+    int offset = 0;
     #ifdef ELF
     if (argc != 2) {
         fprintf(stderr, "No binary provided\n");
@@ -53,6 +52,7 @@ int main(int argc, const char* argv[]) {
         }
         argc = section->sh_size + 1;
         instruction = (uint8_t*) mapping + section->sh_offset;
+        offset = section->sh_offset;
     }
     #else
     uint8_t instructionArray[MAX_SIZE] = { 0 };
@@ -64,10 +64,10 @@ int main(int argc, const char* argv[]) {
     }
     #endif
     #ifdef DECODE
-    decodeAll(argc - 1, instruction);
+    decodeAll(argc - 1, instruction, offset);
     #endif
     #ifdef CFG
-    makeGraph(argc - 1, instruction);
+    makeGraph(argc - 1, instruction, offset);
     #endif
     #ifdef ELF
     munmap(mapping, argc);

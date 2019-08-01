@@ -9,7 +9,6 @@
 #define CFG_H
 #include "decoder.h"
 
-
 uint32_t findBB(instructionData* data, uint32_t addr);
 
 void addrToBB(instructionData* data);
@@ -20,6 +19,6 @@ void makeTransitions(instructionData* data);
 
 void makeTransition(uint32_t from, uint32_t to, bool fallthrough);
 
-void makeGraph(int length, const uint8_t* instructions);
+void makeGraph(int length, const uint8_t* instructions, int offset);
 
 #endif

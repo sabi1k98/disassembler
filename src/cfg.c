@@ -20,6 +20,7 @@ void makeTransition(uint32_t from, uint32_t to, bool fallthrought) {
 uint32_t findBB(instructionData* data, uint32_t addr) {
     uint32_t max = 0;
     for ( uint32_t i = 0; data->transitions[i].to < 0xffffff; i++ ) {
+        //fprintf(stderr, "%d\n", data->transitions[i].to);
         if ( data->transitions[i].to > max && data->transitions[i].to < addr ) {
             max = data->transitions[i].to;
         }
@@ -45,13 +46,13 @@ void makeTransitions(instructionData* data) {
     }
 }
 
-void makeGraph(int length, const uint8_t* instruction) {
+
+void makeGraph(int length, const uint8_t* instruction, int offset) {
     printf("digraph G {\n");
-    instructionData data = {0, { 0 }, false, 0, NULL, instruction, { {0, 0, false} }};
+    instructionData data = {0, { 0 }, false, 0, NULL, instruction, { {0, 0, false} }, offset};
     memset(data.transitions, 0xff, 2048 * sizeof(transition));
-    data.transitions[0].to = 0x0;
-    char strInstr[2048][20] = { { 0 } };
-    int prev = 0;
+    data.transitions[0].to = offset;
+    char strInstr[2048][30] = { { 0 } };
     while ( data.index < length ) {
         int fallbackIndex = data.index;
         if ( !decodeSingleInstruction(length, &data, strInstr[data.index]) ) {
@@ -65,23 +66,25 @@ void makeGraph(int length, const uint8_t* instruction) {
         clearInstructionData(&data);
     }
     addrToBB(&data);
+
+    int prev = 0;
     for ( int i = 0; i < 2048; i++ ) {
         if ( !strInstr[i][0] ) {
             continue;
         }
-        int labelIndex = searchLabelIndex(&data, i);
+        int labelIndex = searchLabelIndex(&data, i + offset);
         if ( labelIndex != -1 ) { 
             if ( strInstr[prev][0] != 'j' ) {
-                if ( i && data.transitions[labelIndex].to <= (uint32_t)length ) {
-                    data.index = findBB(&data, prev);
+                if ( i && data.transitions[labelIndex].to <= (uint32_t)length + offset ) {
+                    data.index = findBB(&data, prev + offset) - offset;
                     writeLabelIndex(&data, data.transitions[labelIndex].to, true);
                 }
                 //addrToBB(&data);
             }
-            openBasicBlock(i, i != 0);
-            printf("BB-0x%x:\\l", i);
+            openBasicBlock(i + offset, i != 0);
+            printf("BB-0x%x:\\l", i + offset);
         }
-        printf("%x:\t", i);
+        printf("%x:\t", i + offset);
         printf("%s\\l", strInstr[i]);
         prev = i;
     }

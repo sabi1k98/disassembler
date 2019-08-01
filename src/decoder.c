@@ -29,19 +29,19 @@ uint32_t computeAddress(uint32_t current, uint32_t relative) {
 
 
 bool findSecondaryOpcode(const uint8_t opcode, char* string) {
-    if ( opcode == JNE_REL32OFF ) {
-        sprintf(string, "%s\t", "jne");
-        return true; 
+    switch ( opcode ) {
+        case JNE_REL32OFF:
+            sprintf(string, "%s\t", "jne");
+            return true;
+        case JB_REL32OFF:
+            sprintf(string, "%s\t", "jb");
+            return true; 
+        case JE_REL32OFF:
+            sprintf(string, "%s\t", "je");
+            return true; 
+        default:
+            return false;
     }
-    if ( opcode == JB_REL32OFF ) { 
-        sprintf(string, "%s\t", "jb");
-        return true; 
-    }
-    if ( opcode == JE_REL32OFF ) { 
-        sprintf(string, "%s\t", "je");
-        return true; 
-    }
-    return false;
 }
 
 char* regValue2String(int regValue, char* string) {
@@ -199,8 +199,8 @@ int searchLabelIndex(instructionData* data, uint32_t jumpTo) {
 void writeLabelIndex(instructionData* data, uint32_t jumpTo, bool fallthrough) {
     for ( int i = 0; i < 2048; i++ ) {
         if ( data->transitions[i].to == 0xffffffff ) {
-            data->transitions[i].from = jumpTo < 0xffffff ? (uint32_t)data->index : 0xffffffff;
-            data->transitions[i].to = jumpTo < 0xffffff ? jumpTo : (uint32_t)data->index;
+            data->transitions[i].from = jumpTo < 0xffffff ? (uint32_t)data->index + data->offset : 0xffffffff;
+            data->transitions[i].to = jumpTo < 0xffffff ? jumpTo : (uint32_t)data->index + data->offset;
             data->transitions[i].fallthrough = fallthrough;
             return;
         }
@@ -218,45 +218,49 @@ bool decodeInstruction(instructionData* data, int length, char result[20]) {
     int i = 0;
     int address;
     while( data->expectedParams[i] != NONE ) {
-        if ( i == length ) {
+        if ( i >= length ) {
             return false;
         }
         switch ( data->expectedParams[i] ) {
             case DISPLACEMENT_8:
                 sprintf(buffer, "%x", computeAddress(data->index, (address = get8BitValue(data))));
-                if ( data->opcode != JMP_REL8OFF && data->opcode != JMP_REL32OFF && 
+                if ( data->opcode != JMP_REL8OFF && 
                         (length > data->index || address <= 0) ) {
-                    writeLabelIndex(data, data->index, true);
+                    writeLabelIndex(data, data->index + data->offset, true);
                 } else {
                     writeLabelIndex(data, 0xffffffff, false);
                 }
-                writeLabelIndex(data, computeAddress(data->index, address), false);
+                writeLabelIndex(data, computeAddress(data->index + data->offset, address), false);
                 strcat(result, buffer);
-                sprintf(buffer, " #<BB-0x%x>", computeAddress(data->index, address));
+                sprintf(buffer, " #<BB-0x%x>", computeAddress(data->index + data->offset, address));
                 strcat(result, buffer);
                 break;
             case DISPLACEMENT_32:
                 if ( data->index + 3 >= length ) {
                     BAD_BYTE();
-                    data->index = length - 1;
+                    data->index = length + data->offset - 1;
                     return true; 
                 }
-                sprintf(buffer, "%x", computeAddress(data->index, (address = get32BitValue(data))));
-                if ( data->opcode != JMP_REL8OFF && data->opcode != JMP_REL32OFF && 
-                        (length > data->index || address <= 0) ) {
-                    writeLabelIndex(data, data->index, true);
-                } else {
-                    writeLabelIndex(data, 0xffffffff, false);
+                sprintf(buffer, "%x", computeAddress(data->index + data->offset, (address = get32BitValue(data))));
+                if ( data->opcode != CALL_REL32OFF ) {
+                    if ( data->opcode != JMP_REL32OFF &&
+                            (length > data->index || address <= 0) ) {
+                        writeLabelIndex(data, data->index + data->offset, true);
+                    } else {
+                        writeLabelIndex(data, 0xffffffff, false);
+                    }
+                    writeLabelIndex(data, computeAddress(data->index + data->offset, address), false);
                 }
-                writeLabelIndex(data, computeAddress(data->index, address), false);
                 strcat(result, buffer);
-                sprintf(buffer, " #<BB-0x%x>", computeAddress(data->index, address));
-                strcat(result, buffer);
+                if ( data->opcode != CALL_REL32OFF ) {
+                    sprintf(buffer, " #<BB-0x%x>", computeAddress(data->index + data->offset, address));
+                    strcat(result, buffer);
+                }
                 break;
             case IMM64:
                 if ( data->index + 3 >= length ) {
                     BAD_BYTE();
-                    data->index = length - 1;
+                    data->index = length + data->offset - 1;
                     return true;
                 }
                 sprintf(buffer, "$0x%x,", get32BitValue(data));
@@ -318,10 +322,10 @@ bool decodeSingleInstruction(int length, instructionData* data, char* strInstr) 
 }
 
 
-void decodeAll(int length, const uint8_t* instruction) {
-    instructionData data = {0, { 0 }, false, 0, NULL, instruction, { {0, 0, false} }};
+void decodeAll(int length, const uint8_t* instruction, int offset) {
+    instructionData data = {0, { 0 }, false, 0, NULL, instruction, { {0, 0, false} }, offset};
     memset(data.transitions, 0xff, 2048 * sizeof(transition));
-    data.transitions[0].to = 0x0;
+    data.transitions[0].to = offset;
     char strInstr[2048][30] = { { 0 } };
     while ( data.index < length ) {
         int fallbackIndex = data.index;
@@ -339,11 +343,11 @@ void decodeAll(int length, const uint8_t* instruction) {
         if ( !strInstr[i][0] ) {
             continue;
         }
-        int labelIndex = searchLabelIndex(&data, i);
+        int labelIndex = searchLabelIndex(&data, i + offset);
         if ( labelIndex != -1 ) {
-            printf("BB-0x%x:\n", i);
+            printf("BB-0x%x:\n", i + offset);
         }
-        printf("%x:\t", i);
+        printf("%x:\t", i + offset);
         printf("%s\n", strInstr[i]);
     }
 }

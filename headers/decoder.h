@@ -73,17 +73,17 @@ enum primary_opcodes {
     JMP_REL32OFF = 0xE9,
     JE_REL8OFF = 0X74,
     JE_REL32OFF = 0x84,
-    JNE_REL8OFF = 0X75,
+    JNE_REL8OFF = 0x75,
     JB_REL8OFF = 0x72,
-    RET = 0XC3,
-    CALL_REL32OFF = 0XE8,
+    RET = 0xC3,
+    CALL_REL32OFF = 0xE8,
     PUSH_IMM64 = 0X68,
     PUSH_REG64 = 0x50,
     POP_REG64 = 0x58,
     INT3 = 0xCC,
     NOP = 0x90,
-    XOR_REG_IMM32 = 0X35,
-    ADD_REG_IMM32 = 0X05,
+    XOR_REG_IMM32 = 0x35,
+    ADD_REG_IMM32 = 0x05,
     CMP_REG_IMM32 = 0x3D,
     CMP_REG_MEM = 0x3B,
     CMP_MEM_REG = 0x39,
@@ -123,6 +123,7 @@ typedef struct instructionData {
     params* expectedParams; /**< array which helps us interpret following bytes */
     const uint8_t* instruction; /**< array of bytes forming the decoded instruction */
     transition transitions[2048];
+    int offset;
 } instructionData;
 
 
@@ -156,7 +157,7 @@ char* findGPR(instructionData* data, char* string);
 char* decodeMoveInstruction(instructionData* data, ModRM modrm, char* string);
 
 
-void decodeAll(int length, const uint8_t* instruction);
+void decodeAll(int length, const uint8_t* instruction, int offset);
 
 
 char* findRegisters(instructionData* data, char* string);
