@@ -245,8 +245,8 @@ TEST(MOVE_INSTRUCTION) {
         uint8_t REXs[] = { 0x4c, 0x4c, 0x48, 0x48 };
         uint8_t modRMs[] = { 0x95, 0x8d, 0x15, 0x15 };
         int32_t offsets[] = { -0x418, 0x3d8, 0xbc02, -0xbc02 };
-        char* expected[] = { "mov\t%r10,-0x418(%rbp)", "mov\t%r9,0x3d8(%rbp)",
-                    "mov\t%rdx,0xbc02(%rip)", "mov\t%rdx,-0xbc02(%rip)"};
+        char* expected[] = { "mov\t%r10,-0x418(%rbp) # (%rbp) + -0x418", "mov\t%r9,0x3d8(%rbp) # (%rbp) + 0x3d8",
+                    "mov\t%rdx,0xbc02(%rip) # 0x7 + 0xbc02", "mov\t%rdx,-0xbc02(%rip) # 0x7 + -0xbc02"};
         for ( int i = 0; i < 4; i++ ) {
             data.index = 0;
             memset(resultBuffer, '\0', 20);
@@ -264,8 +264,8 @@ TEST(MOVE_INSTRUCTION) {
         uint8_t REXs[] = { 0x48, 0x48, 0x48, 0x48 };
         uint8_t modRMs[] = { 0xbd, 0xbd, 0x15, 0x15 };
         int32_t offsets[] = { 0x3e0, -0x3e0, 0x12a13, -0x12a13 };
-        char* expected[] = { "mov\t0x3e0(%rbp),%rdi", "mov\t-0x3e0(%rbp),%rdi",
-                    "mov\t0x12a13(%rip),%rdx", "mov\t-0x12a13(%rip),%rdx"};
+        char* expected[] = { "mov\t0x3e0(%rbp),%rdi # (%rbp) + 0x3e0", "mov\t-0x3e0(%rbp),%rdi # (%rbp) + -0x3e0",
+                    "mov\t0x12a13(%rip),%rdx # 0x7 + 0x12a13", "mov\t-0x12a13(%rip),%rdx # 0x7 + -0x12a13"};
         for ( int i = 0; i < 4; i++ ) {
             data.index = 0;
             memset(resultBuffer, '\0', 20);

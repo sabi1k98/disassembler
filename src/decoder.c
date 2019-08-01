@@ -93,6 +93,14 @@ char* decodeMoveInstruction(instructionData* data, ModRM modrm, char* string) {
         strcat(string, ",");
         strcat(string, source);
     }
+    if ( modrm.mod == 0x00 ) {
+        sprintf(source, " # 0x%x + ", data->index + data->offset);
+        strcat(string, source);
+    } else {
+        strcat(string, " # (%rbp) + ");
+    }
+    sprintSignedHex(offset, source);
+    strcat(string, source);
     return string;
 }
 
@@ -209,8 +217,8 @@ void writeLabelIndex(instructionData* data, uint32_t jumpTo, bool fallthrough) {
 
 #define BAD_BYTE() sprintf(result, "Unknown: 0x%x", data->instruction[data->index])
 
-bool decodeInstruction(instructionData* data, int length, char result[20]) {
-    char buffer[20] = { 0 };
+bool decodeInstruction(instructionData* data, int length, char result[40]) {
+    char buffer[40] = { 0 };
     if ( !findOpcode(data, result) ) {
         BAD_BYTE();
         return true;
@@ -326,7 +334,7 @@ void decodeAll(int length, const uint8_t* instruction, int offset) {
     instructionData data = {0, { 0 }, false, 0, NULL, instruction, { {0, 0, false} }, offset};
     memset(data.transitions, 0xff, 2048 * sizeof(transition));
     data.transitions[0].to = offset;
-    char strInstr[2048][30] = { { 0 } };
+    char strInstr[2048][40] = { { 0 } };
     while ( data.index < length ) {
         int fallbackIndex = data.index;
         if ( !decodeSingleInstruction(length, &data, strInstr[data.index]) ) {
