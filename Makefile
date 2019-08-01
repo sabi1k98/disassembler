@@ -40,6 +40,11 @@ $(ODIR)/maindelf.o: $(CDIR)/main.c $(DEPS)
 	mkdir -p $(ODIR)
 	$(CC) $(CFLAGS) -c $< -o $@ -D DECODE -D ELF
 
+
+$(ODIR)/cfgelf.o: $(CDIR)/cfg.c $(DEPS)
+	mkdir -p $(ODIR)
+	$(CC) $(CFLAGS) -c $< -o $@ -D DECODE -D ELF
+
 $(ODIR)/test%.o: $(TESTDIR)/test%.c $(DEPS)
 	mkdir -p $(ODIR)
 	$(CC) $(CFLAGS) -c $< -o $@ 
@@ -57,7 +62,7 @@ cfg: $(ODIR)/decoder.o $(ODIR)/cfg.o $(ODIR)/maincfg.o
 decode.elf: $(ODIR)/decoder.o $(ODIR)/elfutils.o $(ODIR)/maindelf.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
-cfg.elf: $(ODIR)/decoder.o $(ODIR)/cfg.o $(ODIR)/elfutils.o $(ODIR)/maincfgelf.o
+cfg.elf: $(ODIR)/decoder.o $(ODIR)/cfgelf.o $(ODIR)/elfutils.o $(ODIR)/maincfgelf.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
 clean:
@@ -66,3 +71,5 @@ clean:
 	rm test_hw1
 	rm test_hw2
 	rm cfg
+	rm decode.elf
+	rm cfg.elf

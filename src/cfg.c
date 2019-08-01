@@ -84,7 +84,9 @@ void makeGraph(int length, const uint8_t* instruction, int offset) {
             openBasicBlock(i + offset, i != 0);
             printf("BB-0x%x:\\l", i + offset);
         }
+        #ifndef ELF
         printf("%x:\t", i + offset);
+        #endif
         printf("%s\\l", strInstr[i]);
         prev = i;
     }
