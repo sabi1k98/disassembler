@@ -245,7 +245,7 @@ bool decodeInstruction(instructionData* data, int length, char result[40]) {
         }
         switch ( data->expectedParams[i] ) {
             case DISPLACEMENT_8:
-                sprintf(buffer, "%x", computeAddress(data->index, (address = get8BitValue(data))));
+                sprintf(buffer, "%x", computeAddress(data->index, (address = get8BitValue(data))) + data->offset);
                 if ( data->opcode != JMP_REL8OFF && 
                         (length > data->index || address <= 0) ) {
                     writeLabelIndex(data, data->index + data->offset, true);
@@ -263,7 +263,7 @@ bool decodeInstruction(instructionData* data, int length, char result[40]) {
                     data->index = length + data->offset - 1;
                     return true; 
                 }
-                sprintf(buffer, "%x", computeAddress(data->index + data->offset, (address = get32BitValue(data))));
+                sprintf(buffer, "%x", computeAddress(data->index + data->offset, (address = get32BitValue(data))) + data->offset);
                 if ( data->opcode != CALL_REL32OFF ) {
                     if ( data->opcode != JMP_REL32OFF &&
                             (length > data->index || address <= 0) ) {
@@ -276,6 +276,11 @@ bool decodeInstruction(instructionData* data, int length, char result[40]) {
                 strcat(result, buffer);
                 if ( data->opcode != CALL_REL32OFF ) {
                     sprintf(buffer, " #<BB-0x%x>", computeAddress(data->index + data->offset, address));
+                    strcat(result, buffer);
+                }
+                
+                if ( data->opcode == CALL_REL32OFF ) {
+                    sprintf(buffer, " #<0x%x>", computeAddress(data->index + data->offset, address));
                     strcat(result, buffer);
                 }
                 break;
