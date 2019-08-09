@@ -39,6 +39,9 @@ bool findSecondaryOpcode(const uint8_t opcode, char* string) {
         case JE_REL32OFF:
             sprintf(string, "%s\t", "je");
             return true; 
+        case MUL_REG_REG:
+            sprintf(string, "%s\t", "imul");
+            return true;
         default:
             return false;
     }
@@ -116,6 +119,11 @@ char* findRegisters(instructionData* data, char* string) {
     }
     int firstReg = modrm.reg | (data->rex.r << 3); 
     int secondReg = modrm.rm | (data->rex.b << 3); 
+    if ( data->opcode == MUL_REG_REG ) {
+        int tmp = firstReg;
+        firstReg = secondReg;
+        secondReg = tmp;
+    }
     if ( data->opcode != MUL ) {
         regValue2String(firstReg, string);
         strcat(string, ",");
@@ -189,7 +197,7 @@ void getExpectedParams(instructionData* data) {
 
         if ( data->opcode == CMP_REG_MEM || data->opcode == CMP_MEM_REG ||
                 data->opcode == MUL || data->opcode == MOV_REG_MEM || 
-                data->opcode == MOV_MEM_REG) {
+                data->opcode == MOV_MEM_REG || data->opcode == MUL_REG_REG ) {
                 data->expectedParams[0] = MODrm;
         }
 

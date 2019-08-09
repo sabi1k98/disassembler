@@ -95,7 +95,8 @@ enum primary_opcodes {
 
 enum secondary_opcodes {
     JNE_REL32OFF = 0x85,
-    JB_REL32OFF = 0x82
+    JB_REL32OFF = 0x82,
+    MUL_REG_REG = 0xAF
 };
 
 enum operands {
