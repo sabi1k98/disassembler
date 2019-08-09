@@ -90,6 +90,7 @@ enum primary_opcodes {
     MUL = 0xF7,
     MOV_REG_MEM = 0x8B,
     MOV_MEM_REG = 0x89,
+    ADD_REG_IMM8 = 0x83,
     SECONDARY_ESCAPE = 0x0F /**< more of a prefix than opcode, this still belongs to the primary opcode table */
 };
 
@@ -103,6 +104,7 @@ enum operands {
     NONE,
     DISPLACEMENT_8,
     DISPLACEMENT_32, 
+    IMM8,
     MODrm, 
     S_I_B, 
     IMM64, 

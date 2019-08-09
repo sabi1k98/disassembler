@@ -117,6 +117,9 @@ char* findRegisters(instructionData* data, char* string) {
         data->rex.lowerNibble != 0x4 || !data->rex.w ) {
         return NULL;
     }
+    if ( data->opcode == ADD_REG_IMM8 && modrm.reg == 0x7) {
+        sprintf(string, "cmp\t");
+    }
     int firstReg = modrm.reg | (data->rex.r << 3); 
     int secondReg = modrm.rm | (data->rex.b << 3); 
     if ( data->opcode == MUL_REG_REG ) {
@@ -124,7 +127,7 @@ char* findRegisters(instructionData* data, char* string) {
         firstReg = secondReg;
         secondReg = tmp;
     }
-    if ( data->opcode != MUL ) {
+    if ( data->opcode != MUL && data->opcode != ADD_REG_IMM8 ) {
         regValue2String(firstReg, string);
         strcat(string, ",");
     }
@@ -150,6 +153,7 @@ bool findOpcode(instructionData* data, char* string) {
 	[0x72] = "jb",
 	[0x74] = "je",
 	[0x75] = "jne",
+    [0x83] = "add",
 	[0x89] = "mov", [0x8B] = "mov",
 	[0x90] = "nop",
 	[0xC3] = "ret",
@@ -166,19 +170,11 @@ bool findOpcode(instructionData* data, char* string) {
         return true;
     }
     strcat(string, "\t");
-    if ( data->opcode == XOR_REG_IMM32 || data->opcode == CMP_REG_IMM32
-            || data->opcode == ADD_REG_IMM32 ) {
-    }
     return true;
 }
 
 
 void getExpectedParams(instructionData* data) {
-        if ( data->opcode == JMP_REL8OFF || data->opcode == JE_REL8OFF || data->opcode == JNE_REL8OFF ||
-                data->opcode == JB_REL8OFF ) {
-                data->expectedParams[0] = DISPLACEMENT_8;
-        }
-
         if ( data->opcode == JMP_REL32OFF || data->opcode == JE_REL32OFF || data->opcode == JNE_REL32OFF ||
                 data->opcode == JB_REL32OFF || data->opcode == CALL_REL32OFF ) {
                 data->expectedParams[0] = DISPLACEMENT_32;
@@ -197,8 +193,17 @@ void getExpectedParams(instructionData* data) {
 
         if ( data->opcode == CMP_REG_MEM || data->opcode == CMP_MEM_REG ||
                 data->opcode == MUL || data->opcode == MOV_REG_MEM || 
-                data->opcode == MOV_MEM_REG || data->opcode == MUL_REG_REG ) {
+                data->opcode == MOV_MEM_REG || data->opcode == MUL_REG_REG ||
+                data->opcode == ADD_REG_IMM8 ) {
                 data->expectedParams[0] = MODrm;
+        }
+
+        if ( data->opcode == JMP_REL8OFF || data->opcode == JE_REL8OFF || data->opcode == JNE_REL8OFF ||
+                data->opcode == JB_REL8OFF ) {
+                data->expectedParams[0] = DISPLACEMENT_8;
+        }
+        if ( data->opcode == ADD_REG_IMM8 ) {
+                data->expectedParams[1] = IMM8;
         }
 
 }
@@ -227,6 +232,7 @@ void writeLabelIndex(instructionData* data, uint32_t jumpTo, bool fallthrough) {
 
 bool decodeInstruction(instructionData* data, int length, char result[40]) {
     char buffer[40] = { 0 };
+    char tmp[10] = { 0 };
     if ( !findOpcode(data, result) ) {
         BAD_BYTE();
         return true;
@@ -291,13 +297,20 @@ bool decodeInstruction(instructionData* data, int length, char result[40]) {
                 if ( findGPR(data, buffer) ) {
                     strcat(result, buffer);
                 }
-                return true;
                 break;
             case MODrm:
                 if ( !findRegisters(data, result) ) {
                     BAD_BYTE();
                 }
-                return true;
+                break;
+            case IMM8:
+                sprintSignedHex(get8BitValue(data), buffer);
+                strcpy(tmp, result + 4);
+                result[4] = '\0';
+                strcat(result, "$");
+                strcat(result, buffer);
+                strcat(result, ",");
+                strcat(result, tmp);
                 break;
         }
         i++;
