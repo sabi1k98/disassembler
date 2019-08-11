@@ -13,7 +13,7 @@ OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 .PHONY: all tests clean
 
-all: decode cfg tests cfg.elf decode.elf
+all: decode cfg tests cfg.elf decode.elf symtab
 
 tests: test_hw1 test_hw2
 
@@ -63,6 +63,9 @@ decode.elf: $(ODIR)/decoder.o $(ODIR)/elfutils.o $(ODIR)/maindelf.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
 cfg.elf: $(ODIR)/decoder.o $(ODIR)/cfgelf.o $(ODIR)/elfutils.o $(ODIR)/maincfgelf.o
+	$(CC) -o $@ $^ $(CFLAGS)
+
+symtab: $(ODIR)/elfutils.o $(ODIR)/symtab.o $(ODIR)/symtabmain.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
 clean:

@@ -34,18 +34,18 @@ int isValidElf(void* elf) {
     headerPtr->e_ident[EI_DATA] == ELFDATA2LSB;
 }
 
-inline char* getStrTableString(Elf64_Ehdr* header, uint16_t strOffset) {
+char* getStrTableString(Elf64_Ehdr* header, uint16_t strOffset) {
     uint16_t offset =  header->e_shstrndx;
     Elf64_Shdr* shstr = (Elf64_Shdr *)((char *)header + header->e_shoff) + offset;
     return (char *) header + shstr->sh_offset + strOffset; 
 }
 
-void* findTextSection(void* elf) {
+void* findSection(void* elf, const char* name) {
     Elf64_Ehdr* headerPtr = elf;
     Elf64_Shdr* sectionPtr = (Elf64_Shdr *)((char *) elf + headerPtr->e_shoff);
     for ( int i = 0; i < headerPtr->e_shnum; i++ ) {
         uint16_t strOffset = sectionPtr->sh_name; 
-        if ( !strcmp(getStrTableString(elf, strOffset), ".text") ) {
+        if ( !strcmp(getStrTableString(elf, strOffset), name) ) {
             return sectionPtr; 
         }
         sectionPtr++;

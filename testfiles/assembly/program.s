@@ -1,3 +1,4 @@
+.type npown, @function
 .GLOBAL npown
 npown:
     mov %rsi, %rax

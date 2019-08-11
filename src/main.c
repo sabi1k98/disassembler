@@ -45,7 +45,7 @@ int main(int argc, const char* argv[]) {
     if ( !isValidElf(mapping) ) {
         instruction = mapping;
     } else {
-        Elf64_Shdr* section = findTextSection(mapping);
+        Elf64_Shdr* section = findSection(mapping, ".text");
         if ( !section ) {
             munmap(mapping, argc);
             return EXIT_FAILURE;

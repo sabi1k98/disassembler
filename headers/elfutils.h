@@ -13,10 +13,9 @@ void* mapElf(const char* path, int* const size);
 
 int isValidElf(void* elf);
 
-void* findTextSection(void* elf);
+void* findSection(void* elf, const char* name);
 
 char* getStrTableString(Elf64_Ehdr* elf_header, uint16_t strOffset);
 
-void freeResources(void* elf, const char* elfPath);
 
 #endif
