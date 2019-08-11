@@ -76,3 +76,4 @@ clean:
 	rm cfg
 	rm decode.elf
 	rm cfg.elf
+	rm symtab
