@@ -379,9 +379,9 @@ void decodeAll(int length, const uint8_t* instruction, int offset) {
         }
         int labelIndex = searchLabelIndex(&data, i + offset);
         if ( labelIndex != -1 ) {
-            printf("BB-0x%x:\n", i + offset);
+            printf("BB-0x%x:\n", i);
         }
-        printf("%x:\t", i + offset);
+        printf("%x:\t", i);
         printf("%s\n", strInstr[i]);
     }
 }
