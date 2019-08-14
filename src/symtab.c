@@ -40,7 +40,7 @@ SymbolTable parseFunctionNames(char* mapping) {
     Elf64_Sym* current = (void*) (mapping + symtabHeader->sh_offset);
     for ( size_t i = 0; i < symtabHeader->sh_size / sizeof(Elf64_Sym); i++ ) {
         if ( current->st_name <= 0 || ELF64_ST_TYPE(current->st_info) != STT_FUNC ||
-                ELF64_ST_BIND(current->st_info) != STB_GLOBAL || current->st_value <= 0 ) {
+                ELF64_ST_BIND(current->st_info) != STB_GLOBAL ) {
             current++;
             continue;
         }
