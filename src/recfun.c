@@ -40,8 +40,9 @@ int findEntryPoint(void* mapping) {
 }
 
 int step(instructionData* data, StringInstructions* result, Elf64_Shdr* header) {
+    //printf("index: %d, size: %lu\n", data->index, header->sh_size);
     while ((unsigned long) data->index < header->sh_size ) {
-        printf("index: %d, size: %lu\n", data->index, header->sh_size);
+        //printf("index: %d, size: %lu\n", data->index, header->sh_size);
         if ( data->index >= result->capacity && resizeStrInstr(result) ) {
             return 1;
         } 
@@ -55,7 +56,7 @@ int step(instructionData* data, StringInstructions* result, Elf64_Shdr* header) 
             return 1;
        }
         int current = data->index;
-        if ( !decodeSingleInstruction(header->sh_size, data, result->strInstr[data->index]) ) {
+        if ( !decodeSingleInstruction(header->sh_size, data, result->strInstr[data->index], false) || !strncmp(result->strInstr[current], "ret", 3) ) {
             return 0;
         }
         if ( !strncmp(result->strInstr[current], "Unknown", 7) ) {
@@ -69,7 +70,7 @@ int step(instructionData* data, StringInstructions* result, Elf64_Shdr* header) 
         }
         clearInstructionData(data);
         if ( !strncmp("jmp", result->strInstr[current], 3) ) {
-            data->index = strtol(result->strInstr[current] + 4, NULL, 16);
+            data->index = strtol(result->strInstr[current] + 4, NULL, 16) - data->offset;
             continue;
         }
         if ( !strncmp("j", result->strInstr[current], 1) || !strncmp("call", result->strInstr[current], 3)) {
@@ -83,33 +84,72 @@ int step(instructionData* data, StringInstructions* result, Elf64_Shdr* header) 
     return 0;
 }
 
-int recursiveDissasembly(void* mapping) {
+
+void fillLabels(SymbolTable* symtab, StringInstructions* result, instructionData* data) {
+    Symbol* s;
+    char buffer[40];
+    for ( int i = 0; i < result->capacity; i++ ) {
+        if ( !result->strInstr[i] ) {
+            continue;
+        }
+        if ( result->strInstr[i][0] == 'j' || !strncmp(result->strInstr[i], "call", 4) ) {
+            uint32_t jumpAddr = strtol(result->strInstr[i] + 4, NULL, 16); 
+            if ( jumpAddr - data->offset < (unsigned) result->capacity && !result->strInstr[jumpAddr - data->offset] ) {
+                strcat(result->strInstr[i], " # [broken] ");
+                continue;
+            }
+            s = searchValue(symtab, jumpAddr);
+            strcat(result->strInstr[i], " #");
+            if ( !s ) {
+                sprintf(buffer, "sub_%x", i + data->offset);
+                strcat(result->strInstr[i], buffer);
+            } else {
+                strcat(result->strInstr[i], s->name);
+            }
+        }
+    }
+}
+
+int recursiveDissasembly(void* mapping, SymbolTable* symtab ) {
     uint32_t entry = findEntryPoint(mapping);
+    printf("Entry: %x\n", entry);
     Elf64_Shdr* section = findSection(mapping, ".text");
-    instructionData data = {0, { 0 }, false, entry - section->sh_offset, NULL, mapping, { {0, 0, false} }, section->sh_offset};
-    data.instruction += data.offset;
+    instructionData data = {0, { 0 }, false, 0, NULL, mapping, { {0, 0, false} }, entry};
+    data.instruction += section->sh_offset;
     memset(data.transitions, 0xff, 2048 * sizeof(transition));
-    data.transitions[0].to = data.offset;
+    data.transitions[0].to = section->sh_offset;
+    printf("Sectionoffset: %lx\n", section->sh_offset);
     StringInstructions result;
+    Symbol* s = searchValue(symtab, data.index);
+    if ( s ) {
+        printf("<%s>_<entry>\n", s->name);
+    }
     if ( initStrInstr(&result) ) {
         return 1;
     }
     step(&data, &result, section);
+    fillLabels(symtab, &result, &data);
     for ( int i = 0; i < result.capacity; i++ ) {
         if ( !result.strInstr[i] ) {
             continue;
         }
-        int labelIndex = searchLabelIndex(&data, i + data.offset);
+        int labelIndex = searchLabelIndex(&data, i + entry);
         if ( labelIndex != -1 ) {
-            printf("BB-0x%x:\n", i + data.offset);
+            s = searchValue(symtab, i + entry);
+            if ( !s ) {
+                printf("sub_%x:\n", i + entry);
+            } else {
+                printf("<%s>_<%x>\n", s->name, i + entry);
+            }
         }
-        printf("%x:\t", i + data.offset);
+        printf("%x:\t", i + entry);
         printf("%s\n", result.strInstr[i]);
         free(result.strInstr[i]);
     }
     free(result.strInstr);
     return 0;
 }
+
 
 
 int main(int argc, char** argv) {
@@ -123,7 +163,7 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
     SymbolTable symtab = parseFunctionNames(mapping); 
-    recursiveDissasembly(mapping);
+    recursiveDissasembly(mapping, &symtab);
     munmap(mapping, size);
     free(symtab.content);
     return EXIT_SUCCESS; 

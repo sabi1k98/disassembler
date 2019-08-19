@@ -52,7 +52,7 @@ int main(int argc, const char* argv[]) {
         }
         argc = section->sh_size + 1;
         instruction = (uint8_t*) mapping + section->sh_offset;
-        offset = section->sh_offset;
+        offset = ((Elf64_Ehdr*) mapping)->e_entry;
     }
     #else
     uint8_t instructionArray[MAX_SIZE] = { 0 };

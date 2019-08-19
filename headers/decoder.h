@@ -165,7 +165,7 @@ void decodeAll(int length, const uint8_t* instruction, int offset);
 
 char* findRegisters(instructionData* data, char* string);
 
-bool decodeSingleInstruction(int length, instructionData* data, char* strInstr);
+bool decodeSingleInstruction(int length, instructionData* data, char* strInstr, bool printLabels);
 
 //finds opcode in primary opcode table
 bool findOpcode(instructionData* data, char* string);

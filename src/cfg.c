@@ -51,11 +51,11 @@ void makeGraph(int length, const uint8_t* instruction, int offset) {
     printf("digraph G {\n");
     instructionData data = {0, { 0 }, false, 0, NULL, instruction, { {0, 0, false} }, offset};
     memset(data.transitions, 0xff, 2048 * sizeof(transition));
-    data.transitions[0].to = offset;
+    data.transitions[0].to = 0;
     char strInstr[2048][30] = { { 0 } };
     while ( data.index < length ) {
         int fallbackIndex = data.index;
-        if ( !decodeSingleInstruction(length, &data, strInstr[data.index]) ) {
+        if ( !decodeSingleInstruction(length, &data, strInstr[data.index], true) ) {
             return;
         } 
         if ( !strncmp(strInstr[fallbackIndex], "Unknown", 7) ) {
@@ -72,20 +72,20 @@ void makeGraph(int length, const uint8_t* instruction, int offset) {
         if ( !strInstr[i][0] ) {
             continue;
         }
-        int labelIndex = searchLabelIndex(&data, i + offset);
+        int labelIndex = searchLabelIndex(&data, i);
         if ( labelIndex != -1 ) { 
-            if ( strInstr[prev][0] != 'j' ) {
-                if ( i && data.transitions[labelIndex].to <= (uint32_t)length + offset ) {
-                    data.index = findBB(&data, prev + offset) - offset;
+            if ( strInstr[prev][0] != 'j' && strncmp("ret", strInstr[prev], 3) ) {
+                if ( i && data.transitions[labelIndex].to <= (uint32_t)length ) {
+                    data.index = findBB(&data, prev);
                     writeLabelIndex(&data, data.transitions[labelIndex].to, true);
                 }
                 //addrToBB(&data);
             }
-            openBasicBlock(i + offset, i != 0);
-            printf("BB-0x%x:\\l", i + offset);
+            openBasicBlock(i, i != 0);
+            printf("BB-0x%x:\\l", i);
         }
         #ifndef ELF
-        printf("%x:\t", i + offset);
+        printf("%x:\t", i);
         #endif
         printf("%s\\l", strInstr[i]);
         prev = i;

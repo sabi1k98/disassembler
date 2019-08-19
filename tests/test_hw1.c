@@ -35,7 +35,7 @@ TEST(1B_INSTRUCTIONS) {
         for ( int i = 0; i < 8; i++, instruction[0]++ ) { 
             data.index = 0;
             memset(resultBuffer, '\0', 10);
-            CHECK(decodeSingleInstruction(1, &data, resultBuffer) != 0);
+            CHECK(decodeSingleInstruction(1, &data, resultBuffer, true) != 0);
             CHECK(data.index == 1);
             CHECK_FILE(stderr, "");
             CHECK(strcmp(resultBuffer, expected[i]) == 0);
@@ -50,7 +50,7 @@ TEST(1B_INSTRUCTIONS) {
         for ( int i = 0; i < 8; i++, instruction[1]++ ) { 
             data.index = 0;
             memset(resultBuffer, '\0', 10);
-            CHECK(decodeSingleInstruction(2, &data, resultBuffer) != 0);
+            CHECK(decodeSingleInstruction(2, &data, resultBuffer, true) != 0);
             CHECK(data.index == 2);
             CHECK_FILE(stderr, "");
             CHECK(strcmp(resultBuffer, expected[i]) == 0);
@@ -65,7 +65,7 @@ TEST(1B_INSTRUCTIONS) {
         for ( int i = 0; i < 8; i++, instruction[0]++ ) { 
             data.index = 0;
             memset(resultBuffer, '\0', 10);
-            CHECK(decodeSingleInstruction(1, &data, resultBuffer) != 0);
+            CHECK(decodeSingleInstruction(1, &data, resultBuffer, true) != 0);
             CHECK(data.index == 1);
             CHECK_FILE(stderr, "");
             CHECK(strcmp(resultBuffer, expected[i]) == 0);
@@ -81,7 +81,7 @@ TEST(1B_INSTRUCTIONS) {
         for ( int i = 0; i < 8; i++, instruction[1]++ ) { 
             data.index = 0;
             memset(resultBuffer, '\0', 10);
-            CHECK(decodeSingleInstruction(2, &data, resultBuffer) != 0);
+            CHECK(decodeSingleInstruction(2, &data, resultBuffer, true) != 0);
             CHECK(data.index == 2);
             CHECK_FILE(stderr, "");
             CHECK(strcmp(resultBuffer, expected[i]) == 0);
@@ -89,21 +89,21 @@ TEST(1B_INSTRUCTIONS) {
     }
     SUBTEST(RET) {
         instruction[0] = 0xc3;
-        CHECK(decodeSingleInstruction(1, &data, resultBuffer) != 0);
+        CHECK(decodeSingleInstruction(1, &data, resultBuffer, true) != 0);
         CHECK(data.index == 1);
         CHECK_FILE(stderr, "");
         CHECK(strcmp(resultBuffer, "ret") == 0);
     }
     SUBTEST(NOP) {
         instruction[0] = 0x90;
-        CHECK(decodeSingleInstruction(1, &data, resultBuffer) != 0);
+        CHECK(decodeSingleInstruction(1, &data, resultBuffer, true) != 0);
         CHECK(data.index == 1);
         CHECK_FILE(stderr, "");
         CHECK(strcmp(resultBuffer, "nop") == 0);
     }
     SUBTEST(INT3) {
         instruction[0] = 0xcc;
-        CHECK(decodeSingleInstruction(1, &data, resultBuffer) != 0);
+        CHECK(decodeSingleInstruction(1, &data, resultBuffer, true) != 0);
         CHECK(data.index == 1);
         CHECK_FILE(stderr, "");
         CHECK(strcmp(resultBuffer, "int3") == 0);
@@ -119,7 +119,7 @@ TEST(ARITHMETIC_AND_BITWISE_INSTRUCTIONS) {
     SUBTEST(XOR_EAX) {
         instruction[0] = 0x35;
         put_offset32(instruction + 1, 0x89abcdef);
-        CHECK(decodeSingleInstruction(5, &data, resultBuffer) != 0);
+        CHECK(decodeSingleInstruction(5, &data, resultBuffer, true) != 0);
         CHECK(data.index == 5);
         CHECK_FILE(stderr, "");
         CHECK(strcmp(resultBuffer, "xor\t$0x89abcdef,%eax") == 0);
@@ -128,7 +128,7 @@ TEST(ARITHMETIC_AND_BITWISE_INSTRUCTIONS) {
         instruction[0] = 0x48;
         instruction[1] = 0x35;
         put_offset32(instruction + 2, 0xfedcba98);
-        CHECK(decodeSingleInstruction(6, &data, resultBuffer) != 0);
+        CHECK(decodeSingleInstruction(6, &data, resultBuffer, true) != 0);
         CHECK(data.index == 6);
         CHECK_FILE(stderr, "");
         CHECK(strcmp(resultBuffer, "xor\t$0xfedcba98,%rax") == 0);
@@ -136,7 +136,7 @@ TEST(ARITHMETIC_AND_BITWISE_INSTRUCTIONS) {
     SUBTEST(ADD_EAX) {
         instruction[0] = 0x05;
         put_offset32(instruction + 1, 0x5);
-        CHECK(decodeSingleInstruction(5, &data, resultBuffer) != 0);
+        CHECK(decodeSingleInstruction(5, &data, resultBuffer, true) != 0);
         CHECK(data.index == 5);
         CHECK_FILE(stderr, "");
         CHECK(strcmp(resultBuffer, "add\t$0x5,%eax") == 0);
@@ -145,7 +145,7 @@ TEST(ARITHMETIC_AND_BITWISE_INSTRUCTIONS) {
         instruction[0] = 0x48;
         instruction[1] = 0x05;
         put_offset32(instruction + 2, 0xffffffff);
-        CHECK(decodeSingleInstruction(6, &data, resultBuffer) != 0);
+        CHECK(decodeSingleInstruction(6, &data, resultBuffer, true) != 0);
         CHECK(data.index == 6);
         CHECK_FILE(stderr, "");
         CHECK(strcmp(resultBuffer, "add\t$0xffffffff,%rax") == 0);
@@ -160,7 +160,7 @@ TEST(ARITHMETIC_AND_BITWISE_INSTRUCTIONS) {
         for ( int i = 0; i < 8; i++, instruction[2]++ ) { 
             data.index = 0;
             memset(resultBuffer, '\0', 10);
-            CHECK(decodeSingleInstruction(3, &data, resultBuffer) != 0);
+            CHECK(decodeSingleInstruction(3, &data, resultBuffer, true) != 0);
             CHECK(data.index == 3);
             CHECK_FILE(stderr, "");
             CHECK(strcmp(resultBuffer, expected[i]) == 0);
@@ -176,7 +176,7 @@ TEST(ARITHMETIC_AND_BITWISE_INSTRUCTIONS) {
         for ( int i = 0; i < 8; i++, instruction[2]++ ) { 
             data.index = 0;
             memset(resultBuffer, '\0', 10);
-            CHECK(decodeSingleInstruction(3, &data, resultBuffer) != 0);
+            CHECK(decodeSingleInstruction(3, &data, resultBuffer, true) != 0);
             CHECK(data.index == 3);
             CHECK_FILE(stderr, "");
             CHECK(strcmp(resultBuffer, expected[i]) == 0);
@@ -185,7 +185,7 @@ TEST(ARITHMETIC_AND_BITWISE_INSTRUCTIONS) {
     SUBTEST(CMP_EAX) {
         instruction[0] = 0x3d;
         put_offset32(instruction + 1, 0x100);
-        CHECK(decodeSingleInstruction(5, &data, resultBuffer) != 0);
+        CHECK(decodeSingleInstruction(5, &data, resultBuffer, true) != 0);
         CHECK(data.index == 5);
         CHECK_FILE(stderr, "");
         CHECK(strcmp(resultBuffer, "cmp\t$0x100,%eax") == 0);
@@ -194,7 +194,7 @@ TEST(ARITHMETIC_AND_BITWISE_INSTRUCTIONS) {
         instruction[0] = 0x48;
         instruction[1] = 0x3d;
         put_offset32(instruction + 2, 0xabcd);
-        CHECK(decodeSingleInstruction(6, &data, resultBuffer) != 0);
+        CHECK(decodeSingleInstruction(6, &data, resultBuffer, true) != 0);
         CHECK(data.index == 6);
         CHECK_FILE(stderr, "");
         CHECK(strcmp(resultBuffer, "cmp\t$0xabcd,%rax") == 0);
@@ -209,7 +209,7 @@ TEST(ARITHMETIC_AND_BITWISE_INSTRUCTIONS) {
             data.index = 0;
             memset(resultBuffer, '\0', 10);
             instruction[2] = modRMs[i];
-            CHECK(decodeSingleInstruction(3, &data, resultBuffer) != 0);
+            CHECK(decodeSingleInstruction(3, &data, resultBuffer, true) != 0);
             CHECK(data.index == 3);
             CHECK_FILE(stderr, "");
             CHECK(strcmp(resultBuffer, expected[i]) == 0);
@@ -234,7 +234,7 @@ TEST(MOVE_INSTRUCTION) {
             memset(resultBuffer, '\0', 10);
             instruction[0] = REXs[i];
             instruction[2] = modRMs[i];
-            CHECK(decodeSingleInstruction(3, &data, resultBuffer) != 0);
+            CHECK(decodeSingleInstruction(3, &data, resultBuffer, true) != 0);
             CHECK(data.index == 3);
             CHECK_FILE(stderr, "");
             CHECK(strcmp(resultBuffer, expected[i]) == 0);
@@ -253,7 +253,7 @@ TEST(MOVE_INSTRUCTION) {
             instruction[0] = REXs[i];
             instruction[2] = modRMs[i];
             put_offset32(instruction + 3, offsets[i]);
-            CHECK(decodeSingleInstruction(7, &data, resultBuffer) != 0);
+            CHECK(decodeSingleInstruction(7, &data, resultBuffer, true) != 0);
             CHECK(data.index == 7);
             CHECK_FILE(stderr, "");
             CHECK(strcmp(resultBuffer, expected[i]) == 0);
@@ -272,7 +272,7 @@ TEST(MOVE_INSTRUCTION) {
             instruction[0] = REXs[i];
             instruction[2] = modRMs[i];
             put_offset32(instruction + 3, offsets[i]);
-            CHECK(decodeSingleInstruction(7, &data, resultBuffer) != 0);
+            CHECK(decodeSingleInstruction(7, &data, resultBuffer, true) != 0);
             CHECK(data.index == 7);
             CHECK_FILE(stderr, "");
             CHECK(strcmp(resultBuffer, expected[i]) == 0);
@@ -293,7 +293,7 @@ TEST(JUMPS) {
             data.index = 0;
             memset(resultBuffer, '\0', 30);
             instruction[1] = offsets[i];
-            CHECK(decodeSingleInstruction(2, &data, resultBuffer) != 0);
+            CHECK(decodeSingleInstruction(2, &data, resultBuffer, true) != 0);
             CHECK(data.index == 2);
             CHECK_FILE(stderr, "");
             CHECK(strcmp(resultBuffer, expected[i]) == 0);
@@ -307,7 +307,7 @@ TEST(JUMPS) {
             data.index = 0;
             memset(resultBuffer, '\0', 30);
             put_offset32(instruction + 1, offsets[i]);
-            CHECK(decodeSingleInstruction(5, &data, resultBuffer) != 0);
+            CHECK(decodeSingleInstruction(5, &data, resultBuffer, true) != 0);
             CHECK(data.index == 5);
             CHECK_FILE(stderr, "");
             CHECK(strcmp(resultBuffer, expected[i]) == 0);
@@ -321,7 +321,7 @@ TEST(JUMPS) {
             data.index = 0;
             memset(resultBuffer, '\0', 30);
             instruction[1] = offsets[i];
-            CHECK(decodeSingleInstruction(2, &data, resultBuffer) != 0);
+            CHECK(decodeSingleInstruction(2, &data, resultBuffer, true) != 0);
             CHECK(data.index == 2);
             CHECK_FILE(stderr, "");
             CHECK(strcmp(resultBuffer, expected[i]) == 0);
@@ -336,7 +336,7 @@ TEST(JUMPS) {
             data.index = 0;
             memset(resultBuffer, '\0', 30);
             put_offset32(instruction + 2, offsets[i]);
-            CHECK(decodeSingleInstruction(6, &data, resultBuffer) != 0);
+            CHECK(decodeSingleInstruction(6, &data, resultBuffer, true) != 0);
             CHECK(data.index == 6);
             CHECK_FILE(stderr, "");
             CHECK(strcmp(resultBuffer, expected[i]) == 0);
@@ -350,7 +350,7 @@ TEST(JUMPS) {
             data.index = 0;
             memset(resultBuffer, '\0', 30);
             instruction[1] = offsets[i];
-            CHECK(decodeSingleInstruction(2, &data, resultBuffer) != 0);
+            CHECK(decodeSingleInstruction(2, &data, resultBuffer, true) != 0);
             CHECK(data.index == 2);
             CHECK_FILE(stderr, "");
             CHECK(strcmp(resultBuffer, expected[i]) == 0);
@@ -365,7 +365,7 @@ TEST(JUMPS) {
             data.index = 0;
             memset(resultBuffer, '\0', 30);
             put_offset32(instruction + 2, offsets[i]);
-            CHECK(decodeSingleInstruction(6, &data, resultBuffer) != 0);
+            CHECK(decodeSingleInstruction(6, &data, resultBuffer, true) != 0);
             CHECK(data.index == 6);
             CHECK_FILE(stderr, "");
             CHECK(strcmp(resultBuffer, expected[i]) == 0);
@@ -379,7 +379,7 @@ TEST(JUMPS) {
             data.index = 0;
             memset(resultBuffer, '\0', 30);
             instruction[1] = offsets[i];
-            CHECK(decodeSingleInstruction(2, &data, resultBuffer) != 0);
+            CHECK(decodeSingleInstruction(2, &data, resultBuffer, true) != 0);
             CHECK(data.index == 2);
             CHECK_FILE(stderr, "");
             CHECK(strcmp(resultBuffer, expected[i]) == 0);
@@ -394,7 +394,7 @@ TEST(JUMPS) {
             data.index = 0;
             memset(resultBuffer, '\0', 30);
             put_offset32(instruction + 2, offsets[i]);
-            CHECK(decodeSingleInstruction(6, &data, resultBuffer) != 0);
+            CHECK(decodeSingleInstruction(6, &data, resultBuffer, true) != 0);
             CHECK(data.index == 6);
             CHECK_FILE(stderr, "");
             CHECK(strcmp(resultBuffer, expected[i]) == 0);

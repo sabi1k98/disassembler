@@ -46,6 +46,7 @@ SymbolTable parseFunctionNames(char* mapping) {
         }
         result.content[result.size].name = mapping + strtabHeader->sh_offset + current->st_name;
         result.content[result.size].binding = current->st_value;
+        result.content[result.size].size = current->st_size;
         result.size++;
         current++;
     }
@@ -53,3 +54,12 @@ SymbolTable parseFunctionNames(char* mapping) {
     return result;
 }
 
+
+Symbol* searchValue(SymbolTable* table, uint32_t value) {
+    for ( int i = 0; i < table->size; i++ ) {
+        if ( table->content[i].binding == value) {
+            return table->content + i;
+        }
+    }
+    return NULL;
+}
